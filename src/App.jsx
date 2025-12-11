@@ -1,5 +1,5 @@
 import { useState, createContext, useContext } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -17,10 +17,11 @@ import {
   Search,
   Menu,
   X,
-  ChevronDown,
+  LogOut,
   Globe
 } from 'lucide-react';
-import { mockUsers, getNavItemsForRole } from './data/mockData';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { getNavItemsForRole } from './data/mockData';
 import { translations, getUserLanguage, ukrainianDepartments } from './data/translations';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
@@ -34,6 +35,7 @@ import CalendarPage from './pages/CalendarPage';
 import Analytics from './pages/Analytics';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
+import LoginPage from './pages/LoginPage';
 import './App.css';
 
 // Language Context
@@ -61,14 +63,33 @@ const iconMap = {
   Settings
 };
 
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
+}
+
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [currentUser, setCurrentUser] = useState(mockUsers[0]); // Default: ADMIN
-  const [showRoleSwitcher, setShowRoleSwitcher] = useState(false);
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false);
+  const { user, logout, isAuthenticated } = useAuth();
 
   // Language based on user's department (auto-detect) or manual override
-  const autoLanguage = getUserLanguage(currentUser);
+  const autoLanguage = user ? getUserLanguage(user) : 'he';
   const [manualLanguage, setManualLanguage] = useState(null);
   const language = manualLanguage || autoLanguage;
 
@@ -80,7 +101,7 @@ function AppContent() {
   };
 
   // Get navigation items based on current user's role
-  const navItems = getNavItemsForRole(currentUser.role);
+  const navItems = isAuthenticated ? getNavItemsForRole(user?.role || 'EMPLOYEE') : [];
 
   // Role colors
   const roleColors = {
@@ -95,8 +116,13 @@ function AppContent() {
     EMPLOYEE: t('employee')
   };
 
-  // Check if user is in Ukrainian department
-  const isUkrainianDept = ukrainianDepartments.includes(currentUser.departmentId);
+  // Check if we're on the login page
+  if (location.pathname === '/login') {
+    return <LoginPage />;
+  }
+
+  // Current user for components
+  const currentUser = user || { role: 'EMPLOYEE', firstName: '', lastName: '' };
 
   return (
     <LanguageContext.Provider value={{ language, t, setLanguage: setManualLanguage }}>
@@ -105,7 +131,7 @@ function AppContent() {
         <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
           <div className="sidebar-header">
             <div className="logo">
-              <div className="logo-icon">הש</div>
+              <div className="logo-icon">Y</div>
               {sidebarOpen && <span className="logo-text">The Shul CRM</span>}
             </div>
           </div>
@@ -165,7 +191,7 @@ function AppContent() {
                         setShowLanguageSwitcher(false);
                       }}
                     >
-                      🇮🇱 עברית
+                      IL Hebrew
                     </button>
                     <button
                       className={`lang-option ${language === 'uk' ? 'active' : ''}`}
@@ -174,7 +200,7 @@ function AppContent() {
                         setShowLanguageSwitcher(false);
                       }}
                     >
-                      🇺🇦 Українська
+                      UA Ukrainian
                     </button>
                     <button
                       className={`lang-option ${language === 'en' ? 'active' : ''}`}
@@ -183,55 +209,8 @@ function AppContent() {
                         setShowLanguageSwitcher(false);
                       }}
                     >
-                      🇬🇧 English
+                      GB English
                     </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Role Switcher for Testing */}
-              <div className="role-switcher">
-                <button
-                  className="role-switcher-btn"
-                  onClick={() => setShowRoleSwitcher(!showRoleSwitcher)}
-                  style={{ borderColor: roleColors[currentUser.role] }}
-                >
-                  <span
-                    className="role-indicator"
-                    style={{ background: roleColors[currentUser.role] }}
-                  ></span>
-                  <span>{t('viewAs')} {roleLabels[currentUser.role]}</span>
-                  <ChevronDown size={16} />
-                </button>
-
-                {showRoleSwitcher && (
-                  <div className="role-dropdown">
-                    <div className="dropdown-header">{language === 'he' ? 'בחר משתמש לבדיקה:' : 'Виберіть користувача:'}</div>
-                    {mockUsers.map(user => (
-                      <button
-                        key={user.id}
-                        className={`role-option ${currentUser.id === user.id ? 'active' : ''}`}
-                        onClick={() => {
-                          setCurrentUser(user);
-                          setManualLanguage(null); // Reset to auto language for new user
-                          setShowRoleSwitcher(false);
-                        }}
-                      >
-                        <div className="role-option-avatar" style={{ background: roleColors[user.role] }}>
-                          {user.avatar}
-                        </div>
-                        <div className="role-option-info">
-                          <span className="role-option-name">{user.firstName} {user.lastName}</span>
-                          <span className="role-option-role">{roleLabels[user.role]}</span>
-                          {user.department && (
-                            <span className="role-option-dept" style={{ color: user.department.color }}>
-                              {user.department.name}
-                              {ukrainianDepartments.includes(user.departmentId) && ' 🇺🇦'}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
                   </div>
                 )}
               </div>
@@ -248,31 +227,84 @@ function AppContent() {
 
               <div className="user-profile">
                 <div className="avatar" style={{ background: roleColors[currentUser.role] }}>
-                  {currentUser.avatar}
+                  {currentUser.firstName?.charAt(0) || ''}{currentUser.lastName?.charAt(0) || ''}
                 </div>
                 <div className="user-info">
                   <span className="user-name">{currentUser.firstName} {currentUser.lastName}</span>
                   <span className="user-role">{roleLabels[currentUser.role]}</span>
                 </div>
               </div>
+
+              <button className="icon-button logout-btn" onClick={logout} title={t('logout')}>
+                <LogOut size={20} />
+              </button>
             </div>
           </header>
 
           {/* Page Content */}
           <main className="page-content">
             <Routes>
-              <Route path="/" element={<Dashboard currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/customers" element={<Customers currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/products" element={<Products currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/orders" element={<Orders currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/tasks" element={<Tasks currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/workflows" element={<Workflows currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/departments" element={<Departments currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/parameters" element={<Parameters currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/calendar" element={<CalendarPage currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/analytics" element={<Analytics currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/users" element={<UsersPage currentUser={currentUser} t={t} language={language} />} />
-              <Route path="/settings" element={<SettingsPage currentUser={currentUser} t={t} language={language} />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Dashboard currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/customers" element={
+                <ProtectedRoute>
+                  <Customers currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/products" element={
+                <ProtectedRoute>
+                  <Products currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/orders" element={
+                <ProtectedRoute>
+                  <Orders currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/tasks" element={
+                <ProtectedRoute>
+                  <Tasks currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/workflows" element={
+                <ProtectedRoute>
+                  <Workflows currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/departments" element={
+                <ProtectedRoute>
+                  <Departments currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/parameters" element={
+                <ProtectedRoute>
+                  <Parameters currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/calendar" element={
+                <ProtectedRoute>
+                  <CalendarPage currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/analytics" element={
+                <ProtectedRoute>
+                  <Analytics currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/users" element={
+                <ProtectedRoute>
+                  <UsersPage currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/settings" element={
+                <ProtectedRoute>
+                  <SettingsPage currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/login" element={<LoginPage />} />
             </Routes>
           </main>
         </div>
@@ -284,7 +316,9 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
     </Router>
   );
 }

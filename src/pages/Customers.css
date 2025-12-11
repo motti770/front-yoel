@@ -13,6 +13,46 @@
     width: 100%;
 }
 
+/* ============ LOADING & ERROR STATES ============ */
+.loading-container,
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 1rem;
+    color: var(--text-secondary);
+}
+
+.loading-container .spinner {
+    animation: spin 1s linear infinite;
+    color: var(--primary);
+}
+
+.error-container {
+    color: #ef4444;
+}
+
+.error-container .btn {
+    margin-top: 1rem;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    color: var(--text-tertiary);
+    gap: 1rem;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 /* ============ PAGE HEADER ============ */
 .page-header {
     display: flex;

@@ -1,16 +1,85 @@
-# React + Vite
+# The Shul CRM Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React frontend for The Shul CRM system - a comprehensive customer relationship management system for managing customers, orders, products, tasks, and workflows.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React 19** + Vite
+- **Axios** - API communication
+- **Recharts** - Charts and analytics
+- **Lucide React** - Icons
+- **React Router** - Navigation
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Multi-language support**: Hebrew (RTL), English, Ukrainian
+- **Multiple view modes**: Table, Cards, List, Kanban, Pipeline, Calendar
+- **Role-based access**: Admin, Manager, Employee
+- **Real-time API integration** with The Shul CRM backend
 
-## Expanding the ESLint configuration
+## Pages
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Page | Description |
+|------|-------------|
+| Dashboard | KPIs and analytics overview |
+| Customers | Customer management with advanced filters |
+| Products | Product catalog |
+| Orders | Order management |
+| Tasks | Task tracking by department |
+| Workflows | Production workflow management |
+| Departments | Department configuration |
+| Parameters | Product parameters/options |
+
+## Getting Started
+
+### Install dependencies
+```bash
+npm install
+```
+
+### Development
+```bash
+npm run dev
+```
+Open [http://localhost:5173](http://localhost:5173)
+
+### Build for production
+```bash
+npm run build
+```
+
+## API Configuration
+
+The frontend connects to the CRM API at `https://api.the-shul.com`
+
+To use a different API URL, create a `.env` file:
+```env
+VITE_API_URL=https://your-api-url.com
+```
+
+## Test Credentials
+
+| Field | Value |
+|-------|-------|
+| Email | `admin@yoel.com` |
+| Password | `Admin1234` |
+| Role | ADMIN |
+
+## API Documentation
+
+See [API-REFERENCE.md](./API-REFERENCE.md) for full API documentation.
+
+## Project Structure
+
+```
+src/
+├── contexts/        # React contexts (Auth)
+├── pages/           # Page components
+├── services/        # API service layer
+└── App.jsx          # Main app with routing
+```
+
+## Notes
+
+- All API endpoints have a maximum `limit` of 100 items per request
+- Debug console.log statements are present for development (remove for production)

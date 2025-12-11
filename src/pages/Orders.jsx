@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Plus,
     Search,
@@ -15,19 +15,24 @@ import {
     Clock,
     Check,
     AlertTriangle,
-    FileText
+    FileText,
+    Loader2
 } from 'lucide-react';
-import { mockOrders, mockCustomers, mockProducts } from '../data/mockData';
+import { ordersService, customersService, productsService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import './Orders.css';
 
 function Orders({ currentUser, t, language }) {
+    const [orders, setOrders] = useState([]);
+    const [customers, setCustomers] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [expandedOrder, setExpandedOrder] = useState(null);
     const [currentView, setCurrentView] = useState(VIEW_TYPES.TABLE);
-    const [orders, setOrders] = useState(mockOrders);
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -35,6 +40,7 @@ function Orders({ currentUser, t, language }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [toast, setToast] = useState(null);
+    const [saving, setSaving] = useState(false);
 
     // New order form
     const [newOrderForm, setNewOrderForm] = useState({
@@ -43,9 +49,34 @@ function Orders({ currentUser, t, language }) {
         notes: ''
     });
 
+    // Fetch data
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const [ordersRes, customersRes, productsRes] = await Promise.all([
+                ordersService.getAll({ limit: 100 }),
+                customersService.getAll({ limit: 100 }),
+                productsService.getAll({ limit: 100 })
+            ]);
+
+            if (ordersRes.success) setOrders(ordersRes.data.orders || []);
+            if (customersRes.success) setCustomers(customersRes.data.customers || []);
+            if (productsRes.success) setProducts(productsRes.data.products || []);
+
+        } catch (err) {
+            setError(err.error?.message || 'Failed to load data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredOrders = orders.filter(order => {
-        const matchesSearch = order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.customer?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (order.orderNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (order.customer?.name || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -76,17 +107,36 @@ function Orders({ currentUser, t, language }) {
         setShowViewModal(true);
     };
 
-    const handleStatusChange = (orderId, newStatus) => {
-        setOrders(orders.map(o =>
-            o.id === orderId ? { ...o, status: newStatus } : o
-        ));
-        showToast(t('statusUpdated') || 'סטטוס עודכן');
+    const handleStatusChange = async (orderId, newStatus) => {
+        try {
+            const result = await ordersService.update(orderId, { status: newStatus });
+            if (result.success) {
+                setOrders(orders.map(o =>
+                    o.id === orderId ? { ...o, status: newStatus } : o
+                ));
+                showToast(t?.('statusUpdated') || 'Status updated');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to update status', 'error');
+        }
     };
 
-    const handleDelete = () => {
-        setOrders(orders.filter(o => o.id !== selectedOrder.id));
-        setShowDeleteModal(false);
-        showToast(t('orderDeleted') || 'הזמנה נמחקה');
+    const handleDelete = async () => {
+        try {
+            setSaving(true);
+            const result = await ordersService.cancel(selectedOrder.id);
+            if (result.success) {
+                setOrders(orders.filter(o => o.id !== selectedOrder.id));
+                setShowDeleteModal(false);
+                showToast(t?.('orderDeleted') || 'Order cancelled');
+            } else {
+                showToast(result.error?.message || 'Failed to cancel order', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to cancel order', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     // Add item to new order
@@ -98,38 +148,66 @@ function Orders({ currentUser, t, language }) {
     };
 
     // Create new order
-    const handleCreateOrder = () => {
+    const handleCreateOrder = async () => {
         if (!newOrderForm.customerId || newOrderForm.items.every(i => !i.productId)) {
             showToast(language === 'he' ? 'נא לבחור לקוח ומוצר' : 'Please select customer and product', 'error');
             return;
         }
 
-        const customer = mockCustomers.find(c => c.id === newOrderForm.customerId);
-        const newOrder = {
-            id: `ord-${Date.now()}`,
-            orderNumber: `ORD-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(orders.length + 1).padStart(3, '0')}`,
-            customerId: newOrderForm.customerId,
-            customer,
-            status: 'PENDING',
-            totalAmount: newOrderForm.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0),
-            items: newOrderForm.items.filter(i => i.productId).map((item, idx) => ({
-                id: `item-${Date.now()}-${idx}`,
-                productId: item.productId,
-                product: mockProducts.find(p => p.id === item.productId),
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                selectedParameters: []
-            })),
-            notes: newOrderForm.notes,
-            createdAt: new Date().toISOString().split('T')[0],
-            updatedAt: new Date().toISOString().split('T')[0]
-        };
+        try {
+            setSaving(true);
+            const orderData = {
+                customerId: newOrderForm.customerId,
+                items: newOrderForm.items.filter(i => i.productId).map(item => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    unitPrice: item.unitPrice
+                })),
+                notes: newOrderForm.notes
+            };
 
-        setOrders([newOrder, ...orders]);
-        setShowAddModal(false);
-        setNewOrderForm({ customerId: '', items: [{ productId: '', quantity: 1, unitPrice: 0 }], notes: '' });
-        showToast(t('orderCreated') || 'הזמנה נוצרה בהצלחה! משימות נוצרו אוטומטית.');
+            const result = await ordersService.create(orderData);
+            if (result.success) {
+                setOrders([result.data, ...orders]);
+                setShowAddModal(false);
+                setNewOrderForm({ customerId: '', items: [{ productId: '', quantity: 1, unitPrice: 0 }], notes: '' });
+                showToast(t?.('orderCreated') || 'Order created successfully!');
+            } else {
+                showToast(result.error?.message || 'Failed to create order', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to create order', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="orders-page">
+                <div className="loading-container">
+                    <Loader2 className="spinner" size={40} />
+                    <p>{language === 'he' ? 'טוען הזמנות...' : 'Loading orders...'}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="orders-page">
+                <div className="error-container">
+                    <AlertTriangle size={40} />
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={fetchData}>
+                        {language === 'he' ? 'נסה שוב' : 'Try Again'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // Render based on view type
     const renderContent = () => {
@@ -155,13 +233,13 @@ function Orders({ currentUser, t, language }) {
             <table className="data-table">
                 <thead>
                     <tr>
-                        <th>{t('orderNumber')}</th>
-                        <th>{t('customer')}</th>
-                        <th>{t('status')}</th>
-                        <th>{t('items')}</th>
-                        <th>{t('total')}</th>
-                        <th>{t('date')}</th>
-                        <th>{t('actions')}</th>
+                        <th>{t?.('orderNumber') || 'Order #'}</th>
+                        <th>{t?.('customer') || 'Customer'}</th>
+                        <th>{t?.('status') || 'Status'}</th>
+                        <th>{t?.('items') || 'Items'}</th>
+                        <th>{t?.('total') || 'Total'}</th>
+                        <th>{t?.('date') || 'Date'}</th>
+                        <th>{t?.('actions') || 'Actions'}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -171,7 +249,7 @@ function Orders({ currentUser, t, language }) {
                             <td>
                                 <div className="customer-cell">
                                     <User size={14} />
-                                    <span>{order.customer?.name}</span>
+                                    <span>{order.customer?.name || '-'}</span>
                                 </div>
                             </td>
                             <td>
@@ -192,14 +270,14 @@ function Orders({ currentUser, t, language }) {
                                 </select>
                             </td>
                             <td className="center">{order.items?.length || 0}</td>
-                            <td className="value-cell">₪{order.totalAmount?.toLocaleString()}</td>
-                            <td>{order.createdAt}</td>
+                            <td className="value-cell">${(order.totalAmount || 0).toLocaleString()}</td>
+                            <td>{order.createdAt?.split('T')[0] || '-'}</td>
                             <td>
                                 <div className="action-buttons">
                                     <button className="action-btn" onClick={() => handleView(order)}>
                                         <Eye size={16} />
                                     </button>
-                                    <button className="action-btn" onClick={() => { setSelectedOrder(order); setShowDeleteModal(true); }}>
+                                    <button className="action-btn danger" onClick={() => { setSelectedOrder(order); setShowDeleteModal(true); }}>
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -208,6 +286,12 @@ function Orders({ currentUser, t, language }) {
                     ))}
                 </tbody>
             </table>
+            {filteredOrders.length === 0 && (
+                <div className="empty-state">
+                    <FileText size={48} />
+                    <p>{language === 'he' ? 'לא נמצאו הזמנות' : 'No orders found'}</p>
+                </div>
+            )}
         </div>
     );
 
@@ -227,24 +311,24 @@ function Orders({ currentUser, t, language }) {
                     </div>
                     <div className="order-card-customer">
                         <User size={16} />
-                        <span>{order.customer?.name}</span>
+                        <span>{order.customer?.name || '-'}</span>
                     </div>
                     <div className="order-card-details">
                         <div className="detail-item">
                             <Package size={14} />
-                            <span>{order.items?.length || 0} {t('items')}</span>
+                            <span>{order.items?.length || 0} {t?.('items') || 'items'}</span>
                         </div>
                         <div className="detail-item">
                             <Calendar size={14} />
-                            <span>{order.createdAt}</span>
+                            <span>{order.createdAt?.split('T')[0] || '-'}</span>
                         </div>
                     </div>
                     <div className="order-card-total">
-                        ₪{order.totalAmount?.toLocaleString()}
+                        ${(order.totalAmount || 0).toLocaleString()}
                     </div>
                     <div className="order-card-actions">
                         <button className="btn btn-sm btn-outline" onClick={() => handleView(order)}>
-                            <Eye size={14} /> {t('view')}
+                            <Eye size={14} /> {t?.('view') || 'View'}
                         </button>
                         <select
                             className="status-select-sm"
@@ -273,12 +357,12 @@ function Orders({ currentUser, t, language }) {
                         </div>
                         <div className="list-item-info">
                             <h4>{order.orderNumber}</h4>
-                            <p>{order.customer?.name} • {order.items?.length} {t('items')}</p>
+                            <p>{order.customer?.name || '-'} • {order.items?.length || 0} {t?.('items') || 'items'}</p>
                         </div>
                     </div>
                     <div className="list-item-meta">
-                        <span className="list-item-date">{order.createdAt}</span>
-                        <span className="list-item-amount">₪{order.totalAmount?.toLocaleString()}</span>
+                        <span className="list-item-date">{order.createdAt?.split('T')[0] || '-'}</span>
+                        <span className="list-item-amount">${(order.totalAmount || 0).toLocaleString()}</span>
                         <span
                             className="status-badge"
                             style={{ background: `${statusColors[order.status]}20`, color: statusColors[order.status] }}
@@ -312,14 +396,12 @@ function Orders({ currentUser, t, language }) {
                                     key={order.id}
                                     className="kanban-card"
                                     onClick={() => handleView(order)}
-                                    draggable
-                                    onDragEnd={() => {/* TODO: implement drag */ }}
                                 >
                                     <div className="kanban-card-number">{order.orderNumber}</div>
-                                    <div className="kanban-card-customer">{order.customer?.name}</div>
+                                    <div className="kanban-card-customer">{order.customer?.name || '-'}</div>
                                     <div className="kanban-card-footer">
-                                        <span>{order.items?.length} {t('items')}</span>
-                                        <span>₪{order.totalAmount?.toLocaleString()}</span>
+                                        <span>{order.items?.length || 0} {t?.('items') || 'items'}</span>
+                                        <span>${(order.totalAmount || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
                             ))}
@@ -338,9 +420,11 @@ function Orders({ currentUser, t, language }) {
 
         const ordersByDate = {};
         filteredOrders.forEach(order => {
-            const date = order.createdAt;
-            if (!ordersByDate[date]) ordersByDate[date] = [];
-            ordersByDate[date].push(order);
+            const date = order.createdAt?.split('T')[0];
+            if (date) {
+                if (!ordersByDate[date]) ordersByDate[date] = [];
+                ordersByDate[date].push(order);
+            }
         });
 
         const days = [];
@@ -360,7 +444,7 @@ function Orders({ currentUser, t, language }) {
                             style={{ background: statusColors[order.status] }}
                             onClick={() => handleView(order)}
                         >
-                            {order.orderNumber.slice(-7)}
+                            {order.orderNumber?.slice(-7)}
                         </div>
                     ))}
                     {dayOrders.length > 2 && (
@@ -401,7 +485,7 @@ function Orders({ currentUser, t, language }) {
         return (
             <div className="gantt-view glass-card">
                 <div className="gantt-header">
-                    <div className="gantt-label-col">{t('orderNumber')}</div>
+                    <div className="gantt-label-col">{t?.('orderNumber') || 'Order #'}</div>
                     <div className="gantt-timeline">
                         {days.map((d, i) => (
                             <div key={i} className="gantt-day">
@@ -424,7 +508,7 @@ function Orders({ currentUser, t, language }) {
                                     }}
                                     onClick={() => handleView(order)}
                                 >
-                                    {order.customer?.name?.slice(0, 15)}
+                                    {order.customer?.name?.slice(0, 15) || '-'}
                                 </div>
                             </div>
                         </div>
@@ -449,8 +533,8 @@ function Orders({ currentUser, t, language }) {
             {/* Page Header */}
             <div className="page-header">
                 <div className="header-info">
-                    <h2>{t('orders')}</h2>
-                    <p>{filteredOrders.length} {t('orders')}</p>
+                    <h2>{t?.('orders') || 'Orders'}</h2>
+                    <p>{filteredOrders.length} {t?.('orders') || 'orders'}</p>
                 </div>
                 <div className="header-actions">
                     <ViewSwitcher
@@ -460,7 +544,7 @@ function Orders({ currentUser, t, language }) {
                     />
                     <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
                         <Plus size={18} />
-                        {t('newOrder')}
+                        {t?.('newOrder') || 'New Order'}
                     </button>
                 </div>
             </div>
@@ -472,7 +556,7 @@ function Orders({ currentUser, t, language }) {
                         <Search size={18} />
                         <input
                             type="text"
-                            placeholder={t('search')}
+                            placeholder={t?.('search') || 'Search...'}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -485,7 +569,7 @@ function Orders({ currentUser, t, language }) {
                             onChange={(e) => setStatusFilter(e.target.value)}
                             className="filter-select"
                         >
-                            <option value="all">{t('all')}</option>
+                            <option value="all">{t?.('all') || 'All'}</option>
                             <option value="PENDING">{getStatusLabel('PENDING')}</option>
                             <option value="PROCESSING">{getStatusLabel('PROCESSING')}</option>
                             <option value="COMPLETED">{getStatusLabel('COMPLETED')}</option>
@@ -497,7 +581,7 @@ function Orders({ currentUser, t, language }) {
                 <div className="toolbar-left">
                     <button className="btn btn-outline">
                         <Download size={18} />
-                        {t('export')}
+                        {t?.('export') || 'Export'}
                     </button>
                 </div>
             </div>
@@ -506,33 +590,33 @@ function Orders({ currentUser, t, language }) {
             {renderContent()}
 
             {/* Add Order Modal */}
-            <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={t('newOrder')} size="large">
+            <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={t?.('newOrder') || 'New Order'} size="large">
                 <div className="order-wizard">
                     {/* Step 1: Customer */}
                     <div className="wizard-section">
-                        <h4><User size={18} /> {t('customer')}</h4>
+                        <h4><User size={18} /> {t?.('customer') || 'Customer'}</h4>
                         <select
                             className="form-select"
                             value={newOrderForm.customerId}
                             onChange={(e) => setNewOrderForm({ ...newOrderForm, customerId: e.target.value })}
                         >
                             <option value="">{language === 'he' ? 'בחר לקוח...' : 'Select customer...'}</option>
-                            {mockCustomers.map(c => (
-                                <option key={c.id} value={c.id}>{c.name} - {c.companyName}</option>
+                            {customers.map(c => (
+                                <option key={c.id} value={c.id}>{c.name} - {c.companyName || ''}</option>
                             ))}
                         </select>
                     </div>
 
                     {/* Step 2: Items */}
                     <div className="wizard-section">
-                        <h4><Package size={18} /> {t('items')}</h4>
+                        <h4><Package size={18} /> {t?.('items') || 'Items'}</h4>
                         {newOrderForm.items.map((item, idx) => (
                             <div key={idx} className="order-item-row">
                                 <select
                                     className="form-select"
                                     value={item.productId}
                                     onChange={(e) => {
-                                        const product = mockProducts.find(p => p.id === e.target.value);
+                                        const product = products.find(p => p.id === e.target.value);
                                         const newItems = [...newOrderForm.items];
                                         newItems[idx] = {
                                             ...newItems[idx],
@@ -543,8 +627,8 @@ function Orders({ currentUser, t, language }) {
                                     }}
                                 >
                                     <option value="">{language === 'he' ? 'בחר מוצר...' : 'Select product...'}</option>
-                                    {mockProducts.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} - ₪{p.price.toLocaleString()}</option>
+                                    {products.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name} - ${(p.price || 0).toLocaleString()}</option>
                                     ))}
                                 </select>
                                 <input
@@ -558,7 +642,7 @@ function Orders({ currentUser, t, language }) {
                                         setNewOrderForm({ ...newOrderForm, items: newItems });
                                     }}
                                 />
-                                <span className="item-price">₪{(item.unitPrice * item.quantity).toLocaleString()}</span>
+                                <span className="item-price">${(item.unitPrice * item.quantity).toLocaleString()}</span>
                             </div>
                         ))}
                         <button className="btn btn-outline btn-sm" onClick={addOrderItem}>
@@ -568,7 +652,7 @@ function Orders({ currentUser, t, language }) {
 
                     {/* Step 3: Notes */}
                     <div className="wizard-section">
-                        <h4><FileText size={18} /> {t('notes')}</h4>
+                        <h4><FileText size={18} /> {t?.('notes') || 'Notes'}</h4>
                         <textarea
                             className="form-textarea"
                             value={newOrderForm.notes}
@@ -580,19 +664,19 @@ function Orders({ currentUser, t, language }) {
                     {/* Summary */}
                     <div className="order-summary">
                         <div className="summary-row">
-                            <span>{t('total')}:</span>
+                            <span>{t?.('total') || 'Total'}:</span>
                             <span className="summary-total">
-                                ₪{newOrderForm.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toLocaleString()}
+                                ${newOrderForm.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toLocaleString()}
                             </span>
                         </div>
                     </div>
 
                     <div className="modal-actions">
-                        <button className="btn btn-outline" onClick={() => setShowAddModal(false)}>
-                            {t('cancel')}
+                        <button className="btn btn-outline" onClick={() => setShowAddModal(false)} disabled={saving}>
+                            {t?.('cancel') || 'Cancel'}
                         </button>
-                        <button className="btn btn-primary" onClick={handleCreateOrder}>
-                            <Check size={16} />
+                        <button className="btn btn-primary" onClick={handleCreateOrder} disabled={saving}>
+                            {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}
                             {language === 'he' ? 'צור הזמנה' : 'Create Order'}
                         </button>
                     </div>
@@ -610,41 +694,41 @@ function Orders({ currentUser, t, language }) {
                             >
                                 {getStatusLabel(selectedOrder.status)}
                             </span>
-                            <span className="order-date">{selectedOrder.createdAt}</span>
+                            <span className="order-date">{selectedOrder.createdAt?.split('T')[0]}</span>
                         </div>
 
                         <div className="detail-section">
-                            <h4>{t('customer')}</h4>
-                            <p><strong>{selectedOrder.customer?.name}</strong></p>
-                            <p>{selectedOrder.customer?.companyName}</p>
-                            <p>{selectedOrder.customer?.email}</p>
+                            <h4>{t?.('customer') || 'Customer'}</h4>
+                            <p><strong>{selectedOrder.customer?.name || '-'}</strong></p>
+                            <p>{selectedOrder.customer?.companyName || ''}</p>
+                            <p>{selectedOrder.customer?.email || ''}</p>
                         </div>
 
                         <div className="detail-section">
-                            <h4>{t('orderItems')} ({selectedOrder.items?.length})</h4>
+                            <h4>{t?.('orderItems') || 'Order Items'} ({selectedOrder.items?.length || 0})</h4>
                             <table className="items-table">
                                 <thead>
                                     <tr>
-                                        <th>{t('productName')}</th>
+                                        <th>{t?.('productName') || 'Product'}</th>
                                         <th>{language === 'he' ? 'כמות' : 'Qty'}</th>
-                                        <th>{t('price')}</th>
-                                        <th>{t('total')}</th>
+                                        <th>{t?.('price') || 'Price'}</th>
+                                        <th>{t?.('total') || 'Total'}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {selectedOrder.items?.map(item => (
-                                        <tr key={item.id}>
-                                            <td>{item.product?.name}</td>
+                                    {selectedOrder.items?.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td>{item.product?.name || '-'}</td>
                                             <td className="center">{item.quantity}</td>
-                                            <td>₪{item.unitPrice?.toLocaleString()}</td>
-                                            <td>₪{(item.unitPrice * item.quantity).toLocaleString()}</td>
+                                            <td>${(item.unitPrice || 0).toLocaleString()}</td>
+                                            <td>${((item.unitPrice || 0) * item.quantity).toLocaleString()}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colSpan="3"><strong>{t('total')}</strong></td>
-                                        <td><strong>₪{selectedOrder.totalAmount?.toLocaleString()}</strong></td>
+                                        <td colSpan="3"><strong>{t?.('total') || 'Total'}</strong></td>
+                                        <td><strong>${(selectedOrder.totalAmount || 0).toLocaleString()}</strong></td>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -652,14 +736,14 @@ function Orders({ currentUser, t, language }) {
 
                         {selectedOrder.notes && (
                             <div className="detail-section">
-                                <h4>{t('notes')}</h4>
+                                <h4>{t?.('notes') || 'Notes'}</h4>
                                 <p className="notes-text">{selectedOrder.notes}</p>
                             </div>
                         )}
 
                         <div className="modal-actions">
                             <button className="btn btn-outline" onClick={() => setShowViewModal(false)}>
-                                {t('close') || 'סגור'}
+                                {t?.('close') || 'Close'}
                             </button>
                             <select
                                 className="status-select"
@@ -684,19 +768,19 @@ function Orders({ currentUser, t, language }) {
             </Modal>
 
             {/* Delete Confirmation */}
-            <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title={t('delete')} size="small">
+            <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title={t?.('delete') || 'Cancel Order'} size="small">
                 <div className="delete-confirm">
                     <div className="delete-icon">
                         <AlertTriangle size={48} />
                     </div>
-                    <p>{language === 'he' ? 'האם אתה בטוח שברצונך למחוק את' : 'Delete'} <strong>{selectedOrder?.orderNumber}</strong>?</p>
+                    <p>{language === 'he' ? 'האם לבטל את הזמנה' : 'Cancel order'} <strong>{selectedOrder?.orderNumber}</strong>?</p>
                     <div className="modal-actions">
-                        <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)}>
-                            {t('cancel')}
+                        <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)} disabled={saving}>
+                            {t?.('cancel') || 'No'}
                         </button>
-                        <button className="btn btn-danger" onClick={handleDelete}>
-                            <Trash2 size={16} />
-                            {t('delete')}
+                        <button className="btn btn-danger" onClick={handleDelete} disabled={saving}>
+                            {saving ? <Loader2 className="spinner" size={16} /> : <Trash2 size={16} />}
+                            {language === 'he' ? 'בטל הזמנה' : 'Cancel Order'}
                         </button>
                     </div>
                 </div>

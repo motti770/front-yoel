@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Plus,
     CheckCircle2,
@@ -7,28 +7,103 @@ import {
     AlertCircle,
     User,
     Package,
-    Filter
+    Filter,
+    Loader2,
+    AlertTriangle,
+    Check
 } from 'lucide-react';
-import { mockTasks, getMyTasks, getDepartmentTasks, mockDepartments } from '../data/mockData';
+import { tasksService, departmentsService } from '../services/api';
 import './Tasks.css';
 
-function Tasks({ currentUser }) {
+function Tasks({ currentUser, t, language }) {
+    const [tasks, setTasks] = useState([]);
+    const [departments, setDepartments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [statusFilter, setStatusFilter] = useState('all');
     const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [toast, setToast] = useState(null);
 
     // For EMPLOYEE, show only their tasks or department tasks
-    const isEmployee = currentUser.role === 'EMPLOYEE';
+    const isEmployee = currentUser?.role === 'EMPLOYEE';
 
-    let baseTasks = mockTasks;
-    if (isEmployee) {
-        if (currentUser.departmentId) {
-            baseTasks = getDepartmentTasks(currentUser.departmentId);
-        } else {
-            baseTasks = getMyTasks(currentUser.id);
+    // Fetch data
+    useEffect(() => {
+        fetchData();
+    }, [isEmployee]);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+
+            let tasksRes;
+            if (isEmployee) {
+                // For employees - fetch their tasks
+                tasksRes = await tasksService.getMy();
+            } else {
+                // For admin/manager - fetch all tasks
+                tasksRes = await tasksService.getAll({ limit: 100 });
+            }
+
+            if (tasksRes.success) {
+                setTasks(tasksRes.data.tasks || []);
+            } else {
+                setError(tasksRes.error?.message || 'Failed to load tasks');
+            }
+
+            // Also fetch departments for filter
+            if (!isEmployee) {
+                const deptsRes = await departmentsService.getAll({ limit: 100 });
+                if (deptsRes.success) {
+                    setDepartments(deptsRes.data.departments || []);
+                }
+            }
+        } catch (err) {
+            setError(err.error?.message || 'Failed to load tasks');
+        } finally {
+            setLoading(false);
         }
-    }
+    };
 
-    const filteredTasks = baseTasks.filter(task => {
+    const showToast = (message, type = 'success') => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 3000);
+    };
+
+    // Update task status
+    const handleUpdateStatus = async (taskId, newStatus) => {
+        try {
+            const result = await tasksService.updateStatus(taskId, newStatus);
+            if (result.success) {
+                setTasks(tasks.map(t =>
+                    t.id === taskId ? { ...t, status: newStatus } : t
+                ));
+                showToast(language === 'he' ? 'סטטוס עודכן' : 'Status updated');
+            } else {
+                showToast(result.error?.message || 'Failed to update status', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to update status', 'error');
+        }
+    };
+
+    // Assign task
+    const handleAssign = async (taskId, userId) => {
+        try {
+            const result = await tasksService.assign(taskId, userId);
+            if (result.success) {
+                await fetchData(); // Refresh to get updated assignment info
+                showToast(language === 'he' ? 'משימה הוקצתה' : 'Task assigned');
+            } else {
+                showToast(result.error?.message || 'Failed to assign task', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to assign task', 'error');
+        }
+    };
+
+    const filteredTasks = tasks.filter(task => {
         const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
         const matchesDept = departmentFilter === 'all' || task.departmentId === departmentFilter;
         return matchesStatus && matchesDept;
@@ -42,13 +117,13 @@ function Tasks({ currentUser }) {
         CANCELLED: '#8888a0'
     };
 
-    const statusLabels = {
-        PENDING: 'ממתין',
-        IN_PROGRESS: 'בביצוע',
-        COMPLETED: 'הושלם',
-        BLOCKED: 'חסום',
-        CANCELLED: 'בוטל'
+    const statusLabelsI18n = {
+        he: { PENDING: 'ממתין', IN_PROGRESS: 'בביצוע', COMPLETED: 'הושלם', BLOCKED: 'חסום', CANCELLED: 'בוטל' },
+        en: { PENDING: 'Pending', IN_PROGRESS: 'In Progress', COMPLETED: 'Completed', BLOCKED: 'Blocked', CANCELLED: 'Cancelled' },
+        uk: { PENDING: 'Очікує', IN_PROGRESS: 'В роботі', COMPLETED: 'Виконано', BLOCKED: 'Заблоковано', CANCELLED: 'Скасовано' }
     };
+
+    const statusLabels = statusLabelsI18n[language] || statusLabelsI18n.he;
 
     const statusIcons = {
         PENDING: Clock,
@@ -58,19 +133,50 @@ function Tasks({ currentUser }) {
         CANCELLED: Circle
     };
 
+    // Loading state
+    if (loading) {
+        return (
+            <div className="tasks-page">
+                <div className="loading-container">
+                    <Loader2 className="spinner" size={40} />
+                    <p>{language === 'he' ? 'טוען משימות...' : 'Loading tasks...'}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="tasks-page">
+                <div className="error-container">
+                    <AlertTriangle size={40} />
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={fetchData}>
+                        {language === 'he' ? 'נסה שוב' : 'Try Again'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="tasks-page">
+            {/* Toast */}
+            {toast && (
+                <div className="toast-container">
+                    <div className={`toast ${toast.type}`}>
+                        {toast.type === 'success' ? <Check size={18} /> : <AlertTriangle size={18} />}
+                        <span className="toast-message">{toast.message}</span>
+                    </div>
+                </div>
+            )}
+
             <div className="page-header">
                 <div className="header-info">
-                    <h2>{isEmployee ? 'המשימות שלי' : 'משימות'}</h2>
-                    <p>{filteredTasks.length} משימות</p>
+                    <h2>{isEmployee ? (language === 'he' ? 'המשימות שלי' : 'My Tasks') : (language === 'he' ? 'משימות' : 'Tasks')}</h2>
+                    <p>{filteredTasks.length} {language === 'he' ? 'משימות' : 'tasks'}</p>
                 </div>
-                {!isEmployee && (
-                    <button className="btn btn-primary">
-                        <Plus size={18} />
-                        משימה חדשה
-                    </button>
-                )}
             </div>
 
             {/* Filters */}
@@ -80,7 +186,7 @@ function Tasks({ currentUser }) {
                         className={`filter-btn ${statusFilter === 'all' ? 'active' : ''}`}
                         onClick={() => setStatusFilter('all')}
                     >
-                        הכל
+                        {language === 'he' ? 'הכל' : 'All'}
                     </button>
                     {Object.entries(statusLabels).map(([status, label]) => (
                         <button
@@ -98,7 +204,7 @@ function Tasks({ currentUser }) {
                     ))}
                 </div>
 
-                {!isEmployee && (
+                {!isEmployee && departments.length > 0 && (
                     <div className="filter-group">
                         <Filter size={18} />
                         <select
@@ -106,8 +212,8 @@ function Tasks({ currentUser }) {
                             onChange={(e) => setDepartmentFilter(e.target.value)}
                             className="filter-select"
                         >
-                            <option value="all">כל המחלקות</option>
-                            {mockDepartments.map(dept => (
+                            <option value="all">{language === 'he' ? 'כל המחלקות' : 'All Departments'}</option>
+                            {departments.map(dept => (
                                 <option key={dept.id} value={dept.id}>{dept.name}</option>
                             ))}
                         </select>
@@ -118,26 +224,26 @@ function Tasks({ currentUser }) {
             {/* Tasks Grid */}
             <div className="tasks-grid">
                 {filteredTasks.map(task => {
-                    const StatusIcon = statusIcons[task.status];
+                    const StatusIcon = statusIcons[task.status] || Circle;
                     return (
                         <div key={task.id} className="task-card glass-card">
                             <div className="task-header">
                                 <div
                                     className="task-status-badge"
                                     style={{
-                                        background: `${statusColors[task.status]}20`,
-                                        color: statusColors[task.status]
+                                        background: `${statusColors[task.status] || '#8888a0'}20`,
+                                        color: statusColors[task.status] || '#8888a0'
                                     }}
                                 >
                                     <StatusIcon size={14} />
-                                    {statusLabels[task.status]}
+                                    {statusLabels[task.status] || task.status}
                                 </div>
                                 {task.department && (
                                     <div
                                         className="task-dept-badge"
                                         style={{
-                                            background: `${task.department.color}20`,
-                                            color: task.department.color
+                                            background: `${task.department.color || '#667eea'}20`,
+                                            color: task.department.color || '#667eea'
                                         }}
                                     >
                                         {task.department.name}
@@ -145,16 +251,16 @@ function Tasks({ currentUser }) {
                                 )}
                             </div>
 
-                            <h3 className="task-title">{task.workflowStep.name}</h3>
+                            <h3 className="task-title">{task.workflowStep?.name || '-'}</h3>
 
                             <div className="task-product">
                                 <Package size={16} />
-                                <span>{task.orderItem.product.name}</span>
+                                <span>{task.orderItem?.product?.name || '-'}</span>
                             </div>
 
                             <div className="task-order">
-                                <span className="order-number">{task.orderItem.order.orderNumber}</span>
-                                <span className="customer-name">{task.orderItem.order.customer.name}</span>
+                                <span className="order-number">{task.orderItem?.order?.orderNumber || '-'}</span>
+                                <span className="customer-name">{task.orderItem?.order?.customer?.name || '-'}</span>
                             </div>
 
                             {task.notes && (
@@ -164,7 +270,7 @@ function Tasks({ currentUser }) {
                             <div className="task-footer">
                                 <div className="task-duration">
                                     <Clock size={14} />
-                                    {task.workflowStep.estimatedDurationDays} ימים
+                                    {task.workflowStep?.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}
                                 </div>
 
                                 {task.assignedTo ? (
@@ -173,14 +279,14 @@ function Tasks({ currentUser }) {
                                             className="assignee-avatar"
                                             style={{ background: task.department?.color || 'var(--primary)' }}
                                         >
-                                            {task.assignedTo.avatar}
+                                            {task.assignedTo.firstName?.[0] || 'U'}
                                         </div>
                                         <span>{task.assignedTo.firstName}</span>
                                     </div>
                                 ) : (
-                                    <button className="assign-btn">
+                                    <button className="assign-btn" onClick={() => handleAssign(task.id, currentUser?.id)}>
                                         <User size={14} />
-                                        הקצאה
+                                        {language === 'he' ? 'הקצאה' : 'Assign'}
                                     </button>
                                 )}
                             </div>
@@ -188,10 +294,14 @@ function Tasks({ currentUser }) {
                             {task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && (
                                 <div className="task-actions">
                                     {task.status === 'PENDING' && (
-                                        <button className="btn btn-primary btn-sm">התחל עבודה</button>
+                                        <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'IN_PROGRESS')}>
+                                            {language === 'he' ? 'התחל עבודה' : 'Start Work'}
+                                        </button>
                                     )}
                                     {task.status === 'IN_PROGRESS' && (
-                                        <button className="btn btn-primary btn-sm">סיום משימה</button>
+                                        <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'COMPLETED')}>
+                                            {language === 'he' ? 'סיום משימה' : 'Complete'}
+                                        </button>
                                     )}
                                 </div>
                             )}
@@ -203,8 +313,8 @@ function Tasks({ currentUser }) {
             {filteredTasks.length === 0 && (
                 <div className="empty-state glass-card">
                     <CheckCircle2 size={48} />
-                    <h3>אין משימות</h3>
-                    <p>לא נמצאו משימות התואמות לסינון</p>
+                    <h3>{language === 'he' ? 'אין משימות' : 'No Tasks'}</h3>
+                    <p>{language === 'he' ? 'לא נמצאו משימות התואמות לסינון' : 'No tasks match the current filter'}</p>
                 </div>
             )}
         </div>

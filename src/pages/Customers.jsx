@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Plus,
     Search,
@@ -11,7 +11,6 @@ import {
     Mail,
     Phone,
     ChevronDown,
-    ChevronUp,
     ChevronRight,
     Check,
     AlertTriangle,
@@ -25,9 +24,10 @@ import {
     List,
     Kanban,
     GitBranch,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    Loader2
 } from 'lucide-react';
-import { mockCustomers } from '../data/mockData';
+import { customersService } from '../services/api';
 import Modal from '../components/Modal';
 import ExportDropdown from '../components/ExportDropdown';
 import './Customers.css';
@@ -44,19 +44,20 @@ const VIEW_TYPES = {
 
 function Customers({ currentUser, t, language }) {
     // Data state
-    const [customers, setCustomers] = useState(mockCustomers);
+    const [customers, setCustomers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentView, setCurrentView] = useState(VIEW_TYPES.TABLE);
 
     // Groups state
     const [groups, setGroups] = useState([
-        { id: 'group-1', name: 'לקוחות VIP', color: '#667eea', customerIds: ['cust-1', 'cust-4'], collapsed: false },
-        { id: 'group-2', name: 'לקוחות חדשים', color: '#00f2fe', customerIds: ['cust-2', 'cust-3'], collapsed: false },
-        { id: 'group-3', name: 'לקוחות לא פעילים', color: '#8888a0', customerIds: ['cust-5'], collapsed: false }
+        { id: 'group-1', name: 'VIP', color: '#667eea', customerIds: [], collapsed: false },
+        { id: 'group-2', name: 'New Customers', color: '#00f2fe', customerIds: [], collapsed: false },
+        { id: 'group-3', name: 'Inactive', color: '#8888a0', customerIds: [], collapsed: false }
     ]);
     const [showGroupView, setShowGroupView] = useState(false);
-    const [editingGroup, setEditingGroup] = useState(null);
     const [newGroupName, setNewGroupName] = useState('');
 
     // Advanced filters state
@@ -74,6 +75,7 @@ function Customers({ currentUser, t, language }) {
     const [selectedCustomers, setSelectedCustomers] = useState([]);
     const [toast, setToast] = useState(null);
     const [draggedCustomer, setDraggedCustomer] = useState(null);
+    const [saving, setSaving] = useState(false);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -83,6 +85,27 @@ function Customers({ currentUser, t, language }) {
         companyName: '',
         status: 'ACTIVE'
     });
+
+    // Fetch customers from API
+    useEffect(() => {
+        fetchCustomers();
+    }, []);
+
+    const fetchCustomers = async () => {
+        try {
+            setLoading(true);
+            const result = await customersService.getAll({ limit: 100 });
+            if (result.success) {
+                setCustomers(result.data.customers || []);
+            } else {
+                setError(result.error?.message || 'Failed to load customers');
+            }
+        } catch (err) {
+            setError(err.error?.message || 'Failed to load customers');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Filter fields for advanced filters
     const filterFields = [
@@ -131,13 +154,13 @@ function Customers({ currentUser, t, language }) {
                         if (filter.operator === 'not_equals') return customer.status !== filter.value;
                         break;
                     case 'totalOrders':
-                        const orders = customer.totalOrders;
+                        const orders = customer.totalOrders || 0;
                         if (filter.operator === 'equals') return orders === parseInt(filter.value);
                         if (filter.operator === 'greater') return orders > parseInt(filter.value);
                         if (filter.operator === 'less') return orders < parseInt(filter.value);
                         break;
                     case 'totalSpent':
-                        const spent = customer.totalSpent;
+                        const spent = customer.totalSpent || 0;
                         if (filter.operator === 'equals') return spent === parseInt(filter.value);
                         if (filter.operator === 'greater') return spent > parseInt(filter.value);
                         if (filter.operator === 'less') return spent < parseInt(filter.value);
@@ -151,9 +174,9 @@ function Customers({ currentUser, t, language }) {
     // Filtered customers
     const filteredCustomers = applyAdvancedFilters(
         customers.filter(customer => {
-            const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                customer.companyName.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = (customer.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (customer.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (customer.companyName || '').toLowerCase().includes(searchTerm.toLowerCase());
             const matchesStatus = statusFilter === 'all' || customer.status === statusFilter;
             return matchesSearch && matchesStatus;
         })
@@ -180,51 +203,75 @@ function Customers({ currentUser, t, language }) {
         setFormData({
             name: customer.name,
             email: customer.email,
-            phone: customer.phone,
-            companyName: customer.companyName,
+            phone: customer.phone || '',
+            companyName: customer.companyName || '',
             status: customer.status
         });
         setShowAddModal(true);
     };
 
-    const handleDelete = () => {
-        setCustomers(customers.filter(c => c.id !== selectedCustomer.id));
-        // Remove from groups too
-        setGroups(groups.map(g => ({
-            ...g,
-            customerIds: g.customerIds.filter(id => id !== selectedCustomer.id)
-        })));
-        setShowDeleteModal(false);
-        showToast(t('customerDeleted') || 'לקוח נמחק');
+    const handleDelete = async () => {
+        try {
+            setSaving(true);
+            const result = await customersService.delete(selectedCustomer.id);
+            if (result.success) {
+                setCustomers(customers.filter(c => c.id !== selectedCustomer.id));
+                setGroups(groups.map(g => ({
+                    ...g,
+                    customerIds: g.customerIds.filter(id => id !== selectedCustomer.id)
+                })));
+                setShowDeleteModal(false);
+                showToast(t('customerDeleted') || 'Customer deleted');
+            } else {
+                showToast(result.error?.message || 'Failed to delete', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to delete', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.name || !formData.email) {
             showToast(language === 'he' ? 'נא למלא שדות חובה' : 'Please fill required fields', 'error');
             return;
         }
 
-        if (selectedCustomer) {
-            // Edit
-            setCustomers(customers.map(c =>
-                c.id === selectedCustomer.id ? { ...c, ...formData } : c
-            ));
-            showToast(t('customerUpdated') || 'לקוח עודכן');
-        } else {
-            // Add
-            const newCustomer = {
-                id: `cust-${Date.now()}`,
-                ...formData,
-                totalOrders: 0,
-                totalSpent: 0,
-                createdAt: new Date().toISOString().split('T')[0]
-            };
-            setCustomers([newCustomer, ...customers]);
-            showToast(t('customerAdded') || 'לקוח נוסף');
+        try {
+            setSaving(true);
+
+            if (selectedCustomer) {
+                // Edit
+                const result = await customersService.update(selectedCustomer.id, formData);
+                if (result.success) {
+                    setCustomers(customers.map(c =>
+                        c.id === selectedCustomer.id ? { ...c, ...result.data } : c
+                    ));
+                    showToast(t('customerUpdated') || 'Customer updated');
+                } else {
+                    showToast(result.error?.message || 'Failed to update', 'error');
+                    return;
+                }
+            } else {
+                // Add
+                const result = await customersService.create(formData);
+                if (result.success) {
+                    setCustomers([result.data, ...customers]);
+                    showToast(t('customerAdded') || 'Customer added');
+                } else {
+                    showToast(result.error?.message || 'Failed to create', 'error');
+                    return;
+                }
+            }
+            setShowAddModal(false);
+            setSelectedCustomer(null);
+            setFormData({ name: '', email: '', phone: '', companyName: '', status: 'ACTIVE' });
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to save', 'error');
+        } finally {
+            setSaving(false);
         }
-        setShowAddModal(false);
-        setSelectedCustomer(null);
-        setFormData({ name: '', email: '', phone: '', companyName: '', status: 'ACTIVE' });
     };
 
     // Group handlers
@@ -298,24 +345,51 @@ function Customers({ currentUser, t, language }) {
 
     // Export columns
     const exportColumns = [
-        { label: 'שם', accessor: 'name' },
-        { label: 'חברה', accessor: 'companyName' },
-        { label: 'אימייל', accessor: 'email' },
-        { label: 'טלפון', accessor: 'phone' },
-        { label: 'סטטוס', accessor: 'status' },
-        { label: 'הזמנות', accessor: 'totalOrders' },
-        { label: 'סה"כ קניות', accessor: 'totalSpent' }
+        { label: 'Name', accessor: 'name' },
+        { label: 'Company', accessor: 'companyName' },
+        { label: 'Email', accessor: 'email' },
+        { label: 'Phone', accessor: 'phone' },
+        { label: 'Status', accessor: 'status' },
+        { label: 'Orders', accessor: 'totalOrders' },
+        { label: 'Total Spent', accessor: 'totalSpent' }
     ];
 
     // View Icons
     const viewOptions = [
-        { type: VIEW_TYPES.TABLE, icon: Table2, label: 'טבלה' },
-        { type: VIEW_TYPES.GRID, icon: LayoutGrid, label: 'קוביות' },
-        { type: VIEW_TYPES.LIST, icon: List, label: 'רשימה' },
-        { type: VIEW_TYPES.KANBAN, icon: Kanban, label: 'קנבן' },
+        { type: VIEW_TYPES.TABLE, icon: Table2, label: 'Table' },
+        { type: VIEW_TYPES.GRID, icon: LayoutGrid, label: 'Grid' },
+        { type: VIEW_TYPES.LIST, icon: List, label: 'List' },
+        { type: VIEW_TYPES.KANBAN, icon: Kanban, label: 'Kanban' },
         { type: VIEW_TYPES.PIPELINE, icon: GitBranch, label: 'Pipeline' },
-        { type: VIEW_TYPES.CALENDAR, icon: CalendarIcon, label: 'לוח שנה' }
+        { type: VIEW_TYPES.CALENDAR, icon: CalendarIcon, label: 'Calendar' }
     ];
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="customers-page">
+                <div className="loading-container">
+                    <Loader2 className="spinner" size={40} />
+                    <p>{language === 'he' ? 'טוען לקוחות...' : 'Loading customers...'}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error) {
+        return (
+            <div className="customers-page">
+                <div className="error-container">
+                    <AlertTriangle size={40} />
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={fetchCustomers}>
+                        {language === 'he' ? 'נסה שוב' : 'Try Again'}
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // Render content based on view type
     const renderContent = () => {
@@ -359,8 +433,6 @@ function Customers({ currentUser, t, language }) {
                         <th>{t('email')}</th>
                         <th>{t('phone')}</th>
                         <th>{t('status')}</th>
-                        <th>{t('totalOrdersCount')}</th>
-                        <th>{t('totalSpent')}</th>
                         <th>{t('actions')}</th>
                     </tr>
                 </thead>
@@ -387,9 +459,9 @@ function Customers({ currentUser, t, language }) {
                                     <span>{customer.name}</span>
                                 </div>
                             </td>
-                            <td>{customer.companyName}</td>
+                            <td>{customer.companyName || '-'}</td>
                             <td><a href={`mailto:${customer.email}`}>{customer.email}</a></td>
-                            <td>{customer.phone}</td>
+                            <td>{customer.phone || '-'}</td>
                             <td>
                                 <span
                                     className="status-badge"
@@ -398,8 +470,6 @@ function Customers({ currentUser, t, language }) {
                                     {customer.status === 'ACTIVE' ? t('active') : t('inactive')}
                                 </span>
                             </td>
-                            <td className="center">{customer.totalOrders}</td>
-                            <td className="value-cell">₪{customer.totalSpent.toLocaleString()}</td>
                             <td>
                                 <div className="action-buttons">
                                     <button className="action-btn" onClick={() => handleView(customer)}><Eye size={14} /></button>
@@ -411,6 +481,12 @@ function Customers({ currentUser, t, language }) {
                     ))}
                 </tbody>
             </table>
+            {filteredCustomers.length === 0 && (
+                <div className="empty-state">
+                    <Users size={48} />
+                    <p>{language === 'he' ? 'לא נמצאו לקוחות' : 'No customers found'}</p>
+                </div>
+            )}
         </div>
     );
 
@@ -429,14 +505,14 @@ function Customers({ currentUser, t, language }) {
                         />
                     </div>
                     <h4>{customer.name}</h4>
-                    <p className="company">{customer.companyName}</p>
+                    <p className="company">{customer.companyName || '-'}</p>
                     <div className="card-stats">
                         <div className="stat">
-                            <span className="stat-value">{customer.totalOrders}</span>
+                            <span className="stat-value">{customer.totalOrders || 0}</span>
                             <span className="stat-label">{t('orders')}</span>
                         </div>
                         <div className="stat">
-                            <span className="stat-value">₪{(customer.totalSpent / 1000).toFixed(0)}K</span>
+                            <span className="stat-value">${((customer.totalSpent || 0) / 1000).toFixed(0)}K</span>
                             <span className="stat-label">{t('totalSpent')}</span>
                         </div>
                     </div>
@@ -467,12 +543,12 @@ function Customers({ currentUser, t, language }) {
                         </div>
                         <div className="list-item-info">
                             <h4>{customer.name}</h4>
-                            <p>{customer.companyName} • {customer.email}</p>
+                            <p>{customer.companyName || '-'} - {customer.email}</p>
                         </div>
                     </div>
                     <div className="list-item-meta">
-                        <span className="orders-count">{customer.totalOrders} {t('orders')}</span>
-                        <span className="total-spent">₪{customer.totalSpent.toLocaleString()}</span>
+                        <span className="orders-count">{customer.totalOrders || 0} {t('orders')}</span>
+                        <span className="total-spent">${(customer.totalSpent || 0).toLocaleString()}</span>
                         <span
                             className="status-badge"
                             style={{ background: `${statusColors[customer.status]}20`, color: statusColors[customer.status] }}
@@ -512,10 +588,10 @@ function Customers({ currentUser, t, language }) {
                                     onClick={() => handleView(customer)}
                                 >
                                     <div className="kanban-card-name">{customer.name}</div>
-                                    <div className="kanban-card-company">{customer.companyName}</div>
+                                    <div className="kanban-card-company">{customer.companyName || '-'}</div>
                                     <div className="kanban-card-stats">
-                                        <span>{customer.totalOrders} {t('orders')}</span>
-                                        <span>₪{customer.totalSpent.toLocaleString()}</span>
+                                        <span>{customer.totalOrders || 0} {t('orders')}</span>
+                                        <span>${(customer.totalSpent || 0).toLocaleString()}</span>
                                     </div>
                                 </div>
                             ))}
@@ -529,11 +605,11 @@ function Customers({ currentUser, t, language }) {
     // PIPELINE VIEW - by total spent
     const renderPipelineView = () => {
         const stages = [
-            { id: 'new', label: language === 'he' ? 'חדשים' : 'New', color: '#4facfe', filter: c => c.totalSpent === 0 },
-            { id: 'small', label: language === 'he' ? 'לקוחות קטנים' : 'Small', color: '#fee140', filter: c => c.totalSpent > 0 && c.totalSpent < 50000 },
-            { id: 'medium', label: language === 'he' ? 'לקוחות בינוניים' : 'Medium', color: '#f5576c', filter: c => c.totalSpent >= 50000 && c.totalSpent < 100000 },
-            { id: 'large', label: language === 'he' ? 'לקוחות גדולים' : 'Large', color: '#667eea', filter: c => c.totalSpent >= 100000 && c.totalSpent < 200000 },
-            { id: 'vip', label: 'VIP', color: '#00f2fe', filter: c => c.totalSpent >= 200000 }
+            { id: 'new', label: language === 'he' ? 'חדשים' : 'New', color: '#4facfe', filter: c => (c.totalSpent || 0) === 0 },
+            { id: 'small', label: language === 'he' ? 'קטנים' : 'Small', color: '#fee140', filter: c => (c.totalSpent || 0) > 0 && (c.totalSpent || 0) < 50000 },
+            { id: 'medium', label: language === 'he' ? 'בינוניים' : 'Medium', color: '#f5576c', filter: c => (c.totalSpent || 0) >= 50000 && (c.totalSpent || 0) < 100000 },
+            { id: 'large', label: language === 'he' ? 'גדולים' : 'Large', color: '#667eea', filter: c => (c.totalSpent || 0) >= 100000 && (c.totalSpent || 0) < 200000 },
+            { id: 'vip', label: 'VIP', color: '#00f2fe', filter: c => (c.totalSpent || 0) >= 200000 }
         ];
 
         return (
@@ -542,7 +618,7 @@ function Customers({ currentUser, t, language }) {
                     {stages.map((stage, idx) => (
                         <div key={stage.id} className="pipeline-stage-header">
                             <div className="stage-label" style={{ background: stage.color }}>{stage.label}</div>
-                            {idx < stages.length - 1 && <div className="stage-arrow">→</div>}
+                            {idx < stages.length - 1 && <div className="stage-arrow">-</div>}
                         </div>
                     ))}
                 </div>
@@ -550,7 +626,7 @@ function Customers({ currentUser, t, language }) {
                     {stages.map(stage => (
                         <div key={stage.id} className="pipeline-lane">
                             <div className="lane-total">
-                                ₪{filteredCustomers.filter(stage.filter).reduce((sum, c) => sum + c.totalSpent, 0).toLocaleString()}
+                                ${filteredCustomers.filter(stage.filter).reduce((sum, c) => sum + (c.totalSpent || 0), 0).toLocaleString()}
                             </div>
                             {filteredCustomers.filter(stage.filter).map(customer => (
                                 <div
@@ -560,7 +636,7 @@ function Customers({ currentUser, t, language }) {
                                     onClick={() => handleView(customer)}
                                 >
                                     <div className="pipeline-card-name">{customer.name}</div>
-                                    <div className="pipeline-card-value">₪{customer.totalSpent.toLocaleString()}</div>
+                                    <div className="pipeline-card-value">${(customer.totalSpent || 0).toLocaleString()}</div>
                                 </div>
                             ))}
                         </div>
@@ -578,8 +654,11 @@ function Customers({ currentUser, t, language }) {
 
         const customersByDate = {};
         filteredCustomers.forEach(c => {
-            if (!customersByDate[c.createdAt]) customersByDate[c.createdAt] = [];
-            customersByDate[c.createdAt].push(c);
+            const dateStr = c.createdAt?.split('T')[0];
+            if (dateStr) {
+                if (!customersByDate[dateStr]) customersByDate[dateStr] = [];
+                customersByDate[dateStr].push(c);
+            }
         });
 
         const days = [];
@@ -610,7 +689,7 @@ function Customers({ currentUser, t, language }) {
                     {today.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}
                 </div>
                 <div className="calendar-weekdays">
-                    {weekDays.map(d => <div key={d} className="weekday">{d}</div>)}
+                    {weekDays.map((d, i) => <div key={i} className="weekday">{d}</div>)}
                 </div>
                 <div className="calendar-grid">{days}</div>
             </div>
@@ -660,7 +739,7 @@ function Customers({ currentUser, t, language }) {
                                                         <Building2 size={14} />
                                                         <span>{customer.name}</span>
                                                     </td>
-                                                    <td>{customer.companyName}</td>
+                                                    <td>{customer.companyName || '-'}</td>
                                                     <td>
                                                         <span
                                                             className="status-badge small"
@@ -669,7 +748,7 @@ function Customers({ currentUser, t, language }) {
                                                             {customer.status === 'ACTIVE' ? t('active') : t('inactive')}
                                                         </span>
                                                     </td>
-                                                    <td className="value-cell">₪{customer.totalSpent.toLocaleString()}</td>
+                                                    <td className="value-cell">${(customer.totalSpent || 0).toLocaleString()}</td>
                                                     <td>
                                                         <div className="action-buttons small">
                                                             <button onClick={() => handleView(customer)}><Eye size={12} /></button>
@@ -900,8 +979,11 @@ function Customers({ currentUser, t, language }) {
                         </select>
                     </div>
                     <div className="modal-actions">
-                        <button className="btn btn-outline" onClick={() => setShowAddModal(false)}>{t('cancel')}</button>
-                        <button className="btn btn-primary" onClick={handleSave}><Check size={16} />{t('save')}</button>
+                        <button className="btn btn-outline" onClick={() => setShowAddModal(false)} disabled={saving}>{t('cancel')}</button>
+                        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                            {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}
+                            {t('save')}
+                        </button>
                     </div>
                 </div>
             </Modal>
@@ -912,7 +994,7 @@ function Customers({ currentUser, t, language }) {
                     <div className="customer-detail">
                         <div className="detail-section">
                             <h4>{t('company')}</h4>
-                            <p>{selectedCustomer.companyName}</p>
+                            <p>{selectedCustomer.companyName || '-'}</p>
                         </div>
                         <div className="detail-row">
                             <div className="detail-section">
@@ -921,21 +1003,26 @@ function Customers({ currentUser, t, language }) {
                             </div>
                             <div className="detail-section">
                                 <h4>{t('phone')}</h4>
-                                <p>{selectedCustomer.phone}</p>
+                                <p>{selectedCustomer.phone || '-'}</p>
                             </div>
                         </div>
                         <div className="detail-row">
                             <div className="detail-section">
-                                <h4>{t('totalOrdersCount')}</h4>
-                                <p className="big-number">{selectedCustomer.totalOrders}</p>
+                                <h4>{t('status')}</h4>
+                                <span
+                                    className="status-badge"
+                                    style={{ background: `${statusColors[selectedCustomer.status]}20`, color: statusColors[selectedCustomer.status] }}
+                                >
+                                    {selectedCustomer.status === 'ACTIVE' ? t('active') : t('inactive')}
+                                </span>
                             </div>
                             <div className="detail-section">
-                                <h4>{t('totalSpent')}</h4>
-                                <p className="big-number success">₪{selectedCustomer.totalSpent.toLocaleString()}</p>
+                                <h4>{t('createdAt') || 'Created'}</h4>
+                                <p>{new Date(selectedCustomer.createdAt).toLocaleDateString()}</p>
                             </div>
                         </div>
                         <div className="modal-actions">
-                            <button className="btn btn-outline" onClick={() => setShowViewModal(false)}>{t('close') || 'סגור'}</button>
+                            <button className="btn btn-outline" onClick={() => setShowViewModal(false)}>{t('close') || 'Close'}</button>
                             <button className="btn btn-primary" onClick={() => { setShowViewModal(false); handleEdit(selectedCustomer); }}><Edit size={16} />{t('edit')}</button>
                         </div>
                     </div>
@@ -948,8 +1035,11 @@ function Customers({ currentUser, t, language }) {
                     <div className="delete-icon"><AlertTriangle size={48} /></div>
                     <p>{language === 'he' ? 'למחוק את' : 'Delete'} <strong>{selectedCustomer?.name}</strong>?</p>
                     <div className="modal-actions">
-                        <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)}>{t('cancel')}</button>
-                        <button className="btn btn-danger" onClick={handleDelete}><Trash2 size={16} />{t('delete')}</button>
+                        <button className="btn btn-outline" onClick={() => setShowDeleteModal(false)} disabled={saving}>{t('cancel')}</button>
+                        <button className="btn btn-danger" onClick={handleDelete} disabled={saving}>
+                            {saving ? <Loader2 className="spinner" size={16} /> : <Trash2 size={16} />}
+                            {t('delete')}
+                        </button>
                     </div>
                 </div>
             </Modal>
@@ -959,7 +1049,7 @@ function Customers({ currentUser, t, language }) {
                 <div className="modal-form">
                     <div className="form-group">
                         <label>{language === 'he' ? 'שם הקבוצה' : 'Group Name'}</label>
-                        <input type="text" className="form-input" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder={language === 'he' ? 'לקוחות VIP...' : 'VIP Customers...'} />
+                        <input type="text" className="form-input" value={newGroupName} onChange={(e) => setNewGroupName(e.target.value)} placeholder={language === 'he' ? 'VIP...' : 'VIP Customers...'} />
                     </div>
                     <div className="modal-actions">
                         <button className="btn btn-outline" onClick={() => setShowAddGroupModal(false)}>{t('cancel')}</button>
