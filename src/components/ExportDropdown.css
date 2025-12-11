@@ -1,0 +1,113 @@
+.export-dropdown {
+    position: relative;
+}
+
+.export-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.export-count {
+    background: var(--bg-hover);
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.chevron {
+    transition: transform var(--transition-base);
+}
+
+.chevron.open {
+    transform: rotate(180deg);
+}
+
+.export-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-sm);
+    min-width: 280px;
+    box-shadow: var(--shadow-xl);
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.export-option {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    width: 100%;
+    padding: var(--spacing-md);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    text-align: right;
+}
+
+.export-option:hover {
+    background: var(--bg-hover);
+}
+
+.export-option.exporting {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.export-option-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-gradient);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    flex-shrink: 0;
+}
+
+.export-option-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    flex: 1;
+}
+
+.export-option-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+}
+
+.export-option-desc {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+}
+
+.exporting-text {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
