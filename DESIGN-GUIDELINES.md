@@ -447,6 +447,7 @@ const [currentView, setCurrentView] = useState('table');  // סוג תצוגה
 |------|--------------|-------------------|--------|
 | **Customers** (לקוחות) | ✅ כן | VIP, לקוחות חדשים, לא פעילים | ✅ הוטמע |
 | **Products** (מוצרים) | ✅ כן | מוצרים חמים, מלאי נמוך, מוצרים חדשים | ✅ הוטמע |
+| **Leads** (לידים) | ✅ כן | חם, קר, VIP, מאתר, מהפניה | ⏳ עדיין לא |
 | **Orders** (הזמנות) | ✅ כן | בהמתנה, בייצור, מוכן למשלוח, הושלם | ⏳ עדיין לא |
 | **Tasks** (משימות) | ✅ כן | היום, השבוע, בעתיד, הושלם | ⏳ עדיין לא |
 | **Workflows** (תהליכים) | ❌ לא | - | לא רלוונטי |
@@ -499,7 +500,48 @@ const [currentView, setCurrentView] = useState('table');  // סוג תצוגה
 
 ---
 
-#### 3. Orders (הזמנות) ⏳ לא הוטמע
+#### 3. Leads (לידים) ⏳ לא הוטמע
+**LocalStorage Key:** `leads-groups`
+**קבוצות ברירת מחדל מומלצות:**
+```javascript
+[
+    { id: 'group-1', name: 'לידים חמים', color: '#f5576c', itemIds: [], collapsed: false },
+    { id: 'group-2', name: 'לידים קרים', color: '#4facfe', itemIds: [], collapsed: false },
+    { id: 'group-3', name: 'VIP', color: '#667eea', itemIds: [], collapsed: false },
+    { id: 'group-4', name: 'מאתר', color: '#00f2fe', itemIds: [], collapsed: false },
+    { id: 'group-5', name: 'מהפניה', color: '#fee140', itemIds: [], collapsed: false }
+]
+```
+**שדות להציג בכל פריט:**
+- שם איש קשר + חברה
+- אימייל
+- טלפון
+- מקור (Source)
+- שלב (Stage) עם צבע
+- ערך משוער
+- תאריך מעקב הבא
+- כפתורי פעולה
+
+**סוגי תצוגות נדרשים:**
+| תצוגה | סטטוס | הערות |
+|-------|--------|-------|
+| Table | ⏳ חסר | טבלה עם כל הפרטים |
+| Grid | ⏳ חסר | כרטיסים בגריד |
+| List | ⏳ חסר | רשימה קומפקטית |
+| Kanban | ⏳ חסר | עמודות לפי מקור (Source) |
+| Pipeline | ✅ קיים | עמודות לפי שלב (Stage) - כבר מומש |
+| Calendar | ⏳ חסר | לפי תאריך מעקב הבא |
+
+**הערה חשובה:** 
+כרגע עמוד ה-Leads כולל רק Pipeline View. צריך להוסיף:
+1. ViewSwitcher עם כל סוגי התצוגות
+2. Groups support עם drag & drop
+3. כפתור "הסתר קבוצות ריקות"
+4. שמירה ב-localStorage
+
+---
+
+#### 4. Orders (הזמנות) ⏳ לא הוטמע
 **LocalStorage Key:** `orders-groups`
 **קבוצות ברירת מחדל מומלצות:**
 ```javascript
@@ -521,7 +563,7 @@ const [currentView, setCurrentView] = useState('table');  // סוג תצוגה
 
 ---
 
-#### 4. Tasks (משימות) ⏳ לא הוטמע
+#### 5. Tasks (משימות) ⏳ לא הוטמע
 **LocalStorage Key:** `tasks-groups`
 **קבוצות ברירת מחדל מומלצות:**
 ```javascript

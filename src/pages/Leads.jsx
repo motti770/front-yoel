@@ -28,7 +28,8 @@ import {
     ChevronRight,
     MoreHorizontal
 } from 'lucide-react';
-import { leadsService, customersService } from '../services/api';
+// API service not used yet - using mock data
+// import { leadsService, customersService } from '../services/api';
 import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
 import './Leads.css';
