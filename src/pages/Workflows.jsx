@@ -11,7 +11,10 @@ import {
     Check,
     AlertTriangle,
     Loader2,
-    X
+    X,
+    Copy,
+    ArrowUp,
+    ArrowDown
 } from 'lucide-react';
 import { workflowsService, departmentsService } from '../services/api';
 import Modal from '../components/Modal';
@@ -32,6 +35,7 @@ function Workflows({ currentUser, t, language }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedWorkflow, setSelectedWorkflow] = useState(null);
     const [selectedStep, setSelectedStep] = useState(null);
+    const [draggedStep, setDraggedStep] = useState(null);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -155,6 +159,72 @@ function Workflows({ currentUser, t, language }) {
             }
         } catch (err) {
             showToast(err.error?.message || 'Failed to delete', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Duplicate workflow
+    const handleDuplicateWorkflow = async (workflow) => {
+        try {
+            setSaving(true);
+            // Create new workflow with copied data
+            const newWorkflowData = {
+                name: `${workflow.name} (${language === 'he' ? 'העתק' : 'Copy'})`,
+                code: `${workflow.code}_COPY`,
+                description: workflow.description,
+                isActive: true
+            };
+
+            const result = await workflowsService.create(newWorkflowData);
+            if (result.success) {
+                // Copy steps to new workflow
+                const newWorkflow = result.data;
+                for (const step of (workflow.steps || [])) {
+                    await workflowsService.addStep(newWorkflow.id, {
+                        name: step.name,
+                        description: step.description,
+                        departmentId: step.departmentId || step.department?.id,
+                        stepOrder: step.stepOrder,
+                        estimatedDurationDays: step.estimatedDurationDays,
+                        isActive: true
+                    });
+                }
+                await fetchData(); // Refresh to get complete data
+                showToast(language === 'he' ? 'תהליך שוכפל בהצלחה' : 'Workflow duplicated');
+            } else {
+                showToast(result.error?.message || 'Failed to duplicate', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to duplicate', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Move step up/down
+    const handleMoveStep = async (workflow, step, direction) => {
+        const steps = [...(workflow.steps || [])].sort((a, b) => a.stepOrder - b.stepOrder);
+        const currentIndex = steps.findIndex(s => s.id === step.id);
+        const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+
+        if (newIndex < 0 || newIndex >= steps.length) return;
+
+        // Swap orders
+        const targetStep = steps[newIndex];
+        const tempOrder = step.stepOrder;
+
+        try {
+            setSaving(true);
+            // Update current step
+            await workflowsService.updateStep(step.id, { stepOrder: targetStep.stepOrder });
+            // Update target step
+            await workflowsService.updateStep(targetStep.id, { stepOrder: tempOrder });
+
+            await fetchData();
+            showToast(language === 'he' ? 'סדר השלבים עודכן' : 'Step order updated');
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to reorder', 'error');
         } finally {
             setSaving(false);
         }
@@ -329,10 +399,13 @@ function Workflows({ currentUser, t, language }) {
 
                             {canEdit && (
                                 <div className="workflow-actions" onClick={(e) => e.stopPropagation()}>
-                                    <button className="action-btn" onClick={() => handleEditWorkflow(workflow)}>
+                                    <button className="action-btn" onClick={() => handleDuplicateWorkflow(workflow)} title={language === 'he' ? 'שכפול' : 'Duplicate'}>
+                                        <Copy size={16} />
+                                    </button>
+                                    <button className="action-btn" onClick={() => handleEditWorkflow(workflow)} title={language === 'he' ? 'עריכה' : 'Edit'}>
                                         <Edit size={16} />
                                     </button>
-                                    <button className="action-btn danger" onClick={() => { setSelectedWorkflow(workflow); setShowDeleteModal(true); }}>
+                                    <button className="action-btn danger" onClick={() => { setSelectedWorkflow(workflow); setShowDeleteModal(true); }} title={language === 'he' ? 'מחיקה' : 'Delete'}>
                                         <Trash2 size={16} />
                                     </button>
                                 </div>
@@ -359,10 +432,20 @@ function Workflows({ currentUser, t, language }) {
                                                     <h5>{step.name}</h5>
                                                     {canEdit && (
                                                         <div className="step-actions">
-                                                            <button className="step-action-btn" onClick={() => handleEditStep(workflow, step)}>
+                                                            {index > 0 && (
+                                                                <button className="step-action-btn move" onClick={() => handleMoveStep(workflow, step, 'up')} title={language === 'he' ? 'העבר למעלה' : 'Move up'}>
+                                                                    <ArrowUp size={14} />
+                                                                </button>
+                                                            )}
+                                                            {index < (workflow.steps?.length || 0) - 1 && (
+                                                                <button className="step-action-btn move" onClick={() => handleMoveStep(workflow, step, 'down')} title={language === 'he' ? 'העבר למטה' : 'Move down'}>
+                                                                    <ArrowDown size={14} />
+                                                                </button>
+                                                            )}
+                                                            <button className="step-action-btn" onClick={() => handleEditStep(workflow, step)} title={language === 'he' ? 'עריכה' : 'Edit'}>
                                                                 <Edit size={16} />
                                                             </button>
-                                                            <button className="step-action-btn danger" onClick={() => handleDeleteStep(workflow, step)}>
+                                                            <button className="step-action-btn danger" onClick={() => handleDeleteStep(workflow, step)} title={language === 'he' ? 'מחיקה' : 'Delete'}>
                                                                 <Trash2 size={16} />
                                                             </button>
                                                         </div>

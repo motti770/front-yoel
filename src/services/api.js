@@ -317,12 +317,12 @@ export const parametersService = {
         return api.post(`/parameters/${parameterId}/options`, data);
     },
 
-    updateOption: async (optionId, data) => {
-        return api.put(`/parameters/options/${optionId}`, data);
+    updateOption: async (parameterId, optionId, data) => {
+        return api.put(`/parameters/${parameterId}/options/${optionId}`, data);
     },
 
-    deleteOption: async (optionId) => {
-        return api.delete(`/parameters/options/${optionId}`);
+    deleteOption: async (parameterId, optionId) => {
+        return api.delete(`/parameters/${parameterId}/options/${optionId}`);
     },
 
     // Product assignment

@@ -10,9 +10,17 @@ import {
     Filter,
     Loader2,
     AlertTriangle,
-    Check
+    Check,
+    ChevronDown,
+    ChevronRight,
+    Users,
+    FolderPlus,
+    GripVertical,
+    Trash2
 } from 'lucide-react';
 import { tasksService, departmentsService } from '../services/api';
+import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
+import Modal from '../components/Modal';
 import './Tasks.css';
 
 function Tasks({ currentUser, t, language }) {
@@ -23,6 +31,18 @@ function Tasks({ currentUser, t, language }) {
     const [statusFilter, setStatusFilter] = useState('all');
     const [departmentFilter, setDepartmentFilter] = useState('all');
     const [toast, setToast] = useState(null);
+    const [currentView, setCurrentView] = useState(VIEW_TYPES.KANBAN);
+
+    // Groups state
+    const [groups, setGroups] = useState([
+        { id: 'group-1', name: language === 'he' ? 'דחוף' : 'Urgent', color: '#ff6b6b', taskIds: [], collapsed: false },
+        { id: 'group-2', name: language === 'he' ? 'היום' : 'Today', color: '#00f2fe', taskIds: [], collapsed: false },
+        { id: 'group-3', name: language === 'he' ? 'השבוע' : 'This Week', color: '#fee140', taskIds: [], collapsed: false }
+    ]);
+    const [showGroupView, setShowGroupView] = useState(false);
+    const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
+    const [draggedTask, setDraggedTask] = useState(null);
 
     // For EMPLOYEE, show only their tasks or department tasks
     const isEmployee = currentUser?.role === 'EMPLOYEE';
@@ -133,6 +153,68 @@ function Tasks({ currentUser, t, language }) {
         CANCELLED: Circle
     };
 
+    // Group handlers
+    const addGroup = () => {
+        if (!newGroupName.trim()) return;
+        const newGroup = {
+            id: `group-${Date.now()}`,
+            name: newGroupName,
+            color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+            taskIds: [],
+            collapsed: false
+        };
+        setGroups([...groups, newGroup]);
+        setNewGroupName('');
+        setShowAddGroupModal(false);
+        showToast(language === 'he' ? 'קבוצה נוצרה' : 'Group created');
+    };
+
+    const toggleGroupCollapse = (groupId) => {
+        setGroups(groups.map(g =>
+            g.id === groupId ? { ...g, collapsed: !g.collapsed } : g
+        ));
+    };
+
+    const moveTaskToGroup = (taskId, targetGroupId) => {
+        setGroups(groups.map(g => ({
+            ...g,
+            taskIds: g.id === targetGroupId
+                ? [...g.taskIds.filter(id => id !== taskId), taskId]
+                : g.taskIds.filter(id => id !== taskId)
+        })));
+        showToast(language === 'he' ? 'משימה הועברה' : 'Task moved');
+    };
+
+    const deleteGroup = (groupId) => {
+        setGroups(groups.filter(g => g.id !== groupId));
+        showToast(language === 'he' ? 'קבוצה נמחקה' : 'Group deleted');
+    };
+
+    // Drag & Drop handlers
+    const handleDragStart = (e, taskId) => {
+        setDraggedTask(taskId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, groupId) => {
+        e.preventDefault();
+        if (draggedTask) {
+            moveTaskToGroup(draggedTask, groupId);
+            setDraggedTask(null);
+        }
+    };
+
+    // Get ungrouped tasks
+    const getUngroupedTasks = () => {
+        const allGroupedIds = groups.flatMap(g => g.taskIds);
+        return filteredTasks.filter(t => !allGroupedIds.includes(t.id));
+    };
+
     // Loading state
     if (loading) {
         return (
@@ -160,6 +242,469 @@ function Tasks({ currentUser, t, language }) {
         );
     }
 
+    // Render functions for different views
+
+    // TABLE VIEW
+    const renderTableView = () => (
+        <div className="table-container glass-card">
+            <table className="data-table">
+                <thead>
+                    <tr>
+                        <th>{language === 'he' ? 'משימה' : 'Task'}</th>
+                        <th>{language === 'he' ? 'הזמנה' : 'Order'}</th>
+                        <th>{language === 'he' ? 'לקוח' : 'Customer'}</th>
+                        <th>{language === 'he' ? 'מחלקה' : 'Department'}</th>
+                        <th>{language === 'he' ? 'משך זמן' : 'Duration'}</th>
+                        <th>{language === 'he' ? 'אחראי' : 'Assignee'}</th>
+                        <th>{language === 'he' ? 'סטטוס' : 'Status'}</th>
+                        <th>{language === 'he' ? 'פעולות' : 'Actions'}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredTasks.map(task => (
+                        <tr key={task.id}>
+                            <td><strong>{task.workflowStep?.name || '-'}</strong></td>
+                            <td className="font-mono">{task.orderItem?.order?.orderNumber || '-'}</td>
+                            <td>{task.orderItem?.order?.customer?.name || '-'}</td>
+                            <td>
+                                {task.department && (
+                                    <span
+                                        className="task-dept-badge"
+                                        style={{
+                                            background: `${task.department.color || '#667eea'}20`,
+                                            color: task.department.color || '#667eea'
+                                        }}
+                                    >
+                                        {task.department.name}
+                                    </span>
+                                )}
+                            </td>
+                            <td>{task.workflowStep?.estimatedDurationDays || 1} d</td>
+                            <td>
+                                {task.assignedTo ? (
+                                    <div className="task-assignee-sm">
+                                        <div className="assignee-avatar xxs" style={{ background: task.department?.color || 'var(--primary)' }}>
+                                            {task.assignedTo.firstName?.[0] || 'U'}
+                                        </div>
+                                        <span>{task.assignedTo.firstName}</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-muted">-</span>
+                                )}
+                            </td>
+                            <td>
+                                <span className={`status-dot-label`}>
+                                    <span className="status-dot" style={{ background: statusColors[task.status] }}></span>
+                                    {statusLabels[task.status]}
+                                </span>
+                            </td>
+                            <td>
+                                <div className="action-buttons">
+                                    {(task.status === 'PENDING' || task.status === 'IN_PROGRESS') && (
+                                        <button
+                                            className="action-btn btn-primary-text"
+                                            onClick={() => handleUpdateStatus(task.id, task.status === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED')}
+                                        >
+                                            <Check size={14} />
+                                        </button>
+                                    )}
+                                    {!task.assignedTo && (
+                                        <button className="action-btn" onClick={() => handleAssign(task.id, currentUser?.id)}>
+                                            <User size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+
+    // GRID VIEW
+    const renderGridView = () => (
+        <div className="tasks-grid">
+            {filteredTasks.map(task => {
+                const StatusIcon = statusIcons[task.status] || Circle;
+                return (
+                    <div key={task.id} className="task-card glass-card">
+                        <div className="task-header">
+                            <div
+                                className="task-status-badge"
+                                style={{
+                                    background: `${statusColors[task.status] || '#8888a0'}20`,
+                                    color: statusColors[task.status] || '#8888a0'
+                                }}
+                            >
+                                <StatusIcon size={14} />
+                                {statusLabels[task.status] || task.status}
+                            </div>
+                            {task.department && (
+                                <div
+                                    className="task-dept-badge"
+                                    style={{
+                                        background: `${task.department.color || '#667eea'}20`,
+                                        color: task.department.color || '#667eea'
+                                    }}
+                                >
+                                    {task.department.name}
+                                </div>
+                            )}
+                        </div>
+
+                        <h3 className="task-title">{task.workflowStep?.name || '-'}</h3>
+
+                        <div className="task-product">
+                            <Package size={16} />
+                            <span>{task.orderItem?.product?.name || '-'}</span>
+                        </div>
+
+                        <div className="task-order">
+                            <span className="order-number">{task.orderItem?.order?.orderNumber || '-'}</span>
+                            <span className="customer-name">{task.orderItem?.order?.customer?.name || '-'}</span>
+                        </div>
+
+                        {task.notes && (
+                            <p className="task-notes">{task.notes}</p>
+                        )}
+
+                        <div className="task-footer">
+                            <div className="task-duration">
+                                <Clock size={14} />
+                                {task.workflowStep?.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}
+                            </div>
+
+                            {task.assignedTo ? (
+                                <div className="task-assignee">
+                                    <div
+                                        className="assignee-avatar"
+                                        style={{ background: task.department?.color || 'var(--primary)' }}
+                                    >
+                                        {task.assignedTo.firstName?.[0] || 'U'}
+                                    </div>
+                                    <span>{task.assignedTo.firstName}</span>
+                                </div>
+                            ) : (
+                                <button className="assign-btn" onClick={() => handleAssign(task.id, currentUser?.id)}>
+                                    <User size={14} />
+                                    {language === 'he' ? 'הקצאה' : 'Assign'}
+                                </button>
+                            )}
+                        </div>
+
+                        {task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && (
+                            <div className="task-actions">
+                                {task.status === 'PENDING' && (
+                                    <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'IN_PROGRESS')}>
+                                        {language === 'he' ? 'התחל עבודה' : 'Start Work'}
+                                    </button>
+                                )}
+                                {task.status === 'IN_PROGRESS' && (
+                                    <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'COMPLETED')}>
+                                        {language === 'he' ? 'סיום משימה' : 'Complete'}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    // LIST VIEW
+    const renderListView = () => (
+        <div className="tasks-list">
+            {filteredTasks.map(task => {
+                const StatusIcon = statusIcons[task.status] || Circle;
+                return (
+                    <div key={task.id} className="task-list-item glass-card">
+                        <div className="list-item-main">
+                            <div className="task-status-icon" style={{ color: statusColors[task.status] }}>
+                                <StatusIcon size={20} />
+                            </div>
+                            <div className="list-item-content">
+                                <div className="list-item-header">
+                                    <h3>{task.workflowStep?.name || '-'}</h3>
+                                    <span className="task-product-name">• {task.orderItem?.product?.name || '-'}</span>
+                                </div>
+                                <div className="list-item-sub">
+                                    <span className="order-ref">{task.orderItem?.order?.orderNumber}</span>
+                                    <span className="customer-ref">{task.orderItem?.order?.customer?.name}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="list-item-meta">
+                            {task.department && (
+                                <span
+                                    className="task-dept-badge"
+                                    style={{
+                                        background: `${task.department.color || '#667eea'}20`,
+                                        color: task.department.color || '#667eea'
+                                    }}
+                                >
+                                    {task.department.name}
+                                </span>
+                            )}
+
+                            {task.assignedTo ? (
+                                <div className="task-assignee">
+                                    <div className="assignee-avatar xs" style={{ background: task.department?.color || 'var(--primary)' }}>
+                                        {task.assignedTo.firstName?.[0] || 'U'}
+                                    </div>
+                                    <span className="assignee-name">{task.assignedTo.firstName}</span>
+                                </div>
+                            ) : (
+                                <button className="assign-btn xs" onClick={() => handleAssign(task.id, currentUser?.id)}>
+                                    <User size={12} />
+                                    {language === 'he' ? 'הקצאה' : 'Assign'}
+                                </button>
+                            )}
+
+                            <span className={`status-badge ${task.status.toLowerCase()}`} style={{
+                                background: `${statusColors[task.status]}20`,
+                                color: statusColors[task.status]
+                            }}>
+                                {statusLabels[task.status]}
+                            </span>
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
+    // KANBAN VIEW
+    const renderKanbanView = () => {
+        const statuses = ['PENDING', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'];
+
+        return (
+            <div className="kanban-board">
+                {statuses.map(status => (
+                    <div key={status} className="kanban-column">
+                        <div className="kanban-header" style={{ borderColor: statusColors[status] }}>
+                            <span style={{ color: statusColors[status] }}>
+                                <span className="status-icon-inline">
+                                    {status === 'PENDING' && <Clock size={14} />}
+                                    {status === 'IN_PROGRESS' && <AlertCircle size={14} />}
+                                    {status === 'BLOCKED' && <AlertTriangle size={14} />}
+                                    {status === 'COMPLETED' && <CheckCircle2 size={14} />}
+                                </span>
+                                {statusLabels[status]}
+                            </span>
+                            <span className="count">
+                                {filteredTasks.filter(t => t.status === status).length}
+                            </span>
+                        </div>
+                        <div className="kanban-cards">
+                            {filteredTasks.filter(t => t.status === status).map(task => (
+                                <div key={task.id} className="kanban-card task-kanban">
+                                    <div className="kanban-card-header">
+                                        <div className="kanban-card-department" style={{ color: task.department?.color }}>
+                                            {task.department?.name}
+                                        </div>
+                                        <div className="kanban-card-order">{task.orderItem?.order?.orderNumber}</div>
+                                    </div>
+
+                                    <div className="kanban-card-title">{task.workflowStep?.name}</div>
+                                    <div className="kanban-card-subtitle">{task.orderItem?.product?.name}</div>
+
+                                    <div className="kanban-card-footer">
+                                        {task.assignedTo ? (
+                                            <div className="task-assignee-xs">
+                                                <div className="assignee-avatar xxs" style={{ background: task.department?.color }}>
+                                                    {task.assignedTo.firstName?.[0] || 'U'}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button className="icon-btn-xs" onClick={() => handleAssign(task.id, currentUser?.id)} title="Assign">
+                                                <User size={12} />
+                                            </button>
+                                        )}
+
+                                        {status !== 'COMPLETED' && (
+                                            <div className="kanban-actions">
+                                                {status === 'PENDING' && (
+                                                    <button className="action-link" onClick={() => handleUpdateStatus(task.id, 'IN_PROGRESS')}>
+                                                        {language === 'he' ? 'התחל' : 'Start'}
+                                                    </button>
+                                                )}
+                                                {status === 'IN_PROGRESS' && (
+                                                    <button className="action-link" onClick={() => handleUpdateStatus(task.id, 'COMPLETED')}>
+                                                        {language === 'he' ? 'סיים' : 'Done'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    // GROUPS VIEW - Monday.com style
+    const renderGroupsView = () => (
+        <div className="groups-view">
+            {groups.map(group => (
+                <div
+                    key={group.id}
+                    className="group-section"
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, group.id)}
+                >
+                    <div className="group-header" style={{ borderColor: group.color }}>
+                        <button className="collapse-btn" onClick={() => toggleGroupCollapse(group.id)}>
+                            {group.collapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                        <div className="group-color" style={{ background: group.color }} />
+                        <span className="group-name">{group.name}</span>
+                        <span className="group-count">{group.taskIds.length}</span>
+                        <button className="group-menu" onClick={() => deleteGroup(group.id)}>
+                            <Trash2 size={14} />
+                        </button>
+                    </div>
+
+                    {!group.collapsed && (
+                        <div className="group-content">
+                            {group.taskIds.length === 0 ? (
+                                <div className="empty-group">
+                                    {language === 'he' ? 'גרור משימות לכאן' : 'Drag tasks here'}
+                                </div>
+                            ) : (
+                                <table className="group-table">
+                                    <tbody>
+                                        {group.taskIds.map(taskId => {
+                                            const task = tasks.find(t => t.id === taskId);
+                                            if (!task) return null;
+                                            const StatusIcon = statusIcons[task.status] || Circle;
+                                            return (
+                                                <tr
+                                                    key={task.id}
+                                                    draggable
+                                                    onDragStart={(e) => handleDragStart(e, task.id)}
+                                                >
+                                                    <td className="drag-handle"><GripVertical size={14} /></td>
+                                                    <td className="task-cell">
+                                                        <StatusIcon size={14} style={{ color: statusColors[task.status] }} />
+                                                        <span>{task.workflowStep?.name || '-'}</span>
+                                                    </td>
+                                                    <td className="order-cell">{task.orderItem?.order?.orderNumber || '-'}</td>
+                                                    <td className="status-cell">
+                                                        <span className="status-badge-sm" style={{
+                                                            background: `${statusColors[task.status]}20`,
+                                                            color: statusColors[task.status]
+                                                        }}>
+                                                            {statusLabels[task.status]}
+                                                        </span>
+                                                    </td>
+                                                    <td className="assignee-cell">
+                                                        {task.assignedTo ? (
+                                                            <div className="task-assignee-sm">
+                                                                <div className="assignee-avatar xxs" style={{ background: task.department?.color }}>
+                                                                    {task.assignedTo.firstName?.[0] || 'U'}
+                                                                </div>
+                                                            </div>
+                                                        ) : '-'}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    )}
+                </div>
+            ))}
+
+            {/* Ungrouped Tasks */}
+            <div
+                className="group-section ungrouped"
+                onDragOver={handleDragOver}
+                onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggedTask) {
+                        setGroups(groups.map(g => ({
+                            ...g,
+                            taskIds: g.taskIds.filter(id => id !== draggedTask)
+                        })));
+                        setDraggedTask(null);
+                    }
+                }}
+            >
+                <div className="group-header" style={{ borderColor: '#8888a0' }}>
+                    <div className="group-color" style={{ background: '#8888a0' }} />
+                    <span className="group-name">{language === 'he' ? 'ללא קבוצה' : 'Ungrouped'}</span>
+                    <span className="group-count">{getUngroupedTasks().length}</span>
+                </div>
+                <div className="group-content">
+                    <table className="group-table">
+                        <tbody>
+                            {getUngroupedTasks().map(task => {
+                                const StatusIcon = statusIcons[task.status] || Circle;
+                                return (
+                                    <tr
+                                        key={task.id}
+                                        draggable
+                                        onDragStart={(e) => handleDragStart(e, task.id)}
+                                    >
+                                        <td className="drag-handle"><GripVertical size={14} /></td>
+                                        <td className="task-cell">
+                                            <StatusIcon size={14} style={{ color: statusColors[task.status] }} />
+                                            <span>{task.workflowStep?.name || '-'}</span>
+                                        </td>
+                                        <td className="order-cell">{task.orderItem?.order?.orderNumber || '-'}</td>
+                                        <td className="status-cell">
+                                            <span className="status-badge-sm" style={{
+                                                background: `${statusColors[task.status]}20`,
+                                                color: statusColors[task.status]
+                                            }}>
+                                                {statusLabels[task.status]}
+                                            </span>
+                                        </td>
+                                        <td className="assignee-cell">
+                                            {task.assignedTo ? (
+                                                <div className="task-assignee-sm">
+                                                    <div className="assignee-avatar xxs" style={{ background: task.department?.color }}>
+                                                        {task.assignedTo.firstName?.[0] || 'U'}
+                                                    </div>
+                                                </div>
+                                            ) : '-'}
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderContent = () => {
+        if (showGroupView) {
+            return renderGroupsView();
+        }
+
+        switch (currentView) {
+            case VIEW_TYPES.TABLE:
+                return renderTableView();
+            case VIEW_TYPES.LIST:
+                return renderListView();
+            case VIEW_TYPES.KANBAN:
+                return renderKanbanView();
+            case VIEW_TYPES.GRID:
+            default:
+                return renderGridView();
+        }
+    };
+
     return (
         <div className="tasks-page">
             {/* Toast */}
@@ -176,6 +721,29 @@ function Tasks({ currentUser, t, language }) {
                 <div className="header-info">
                     <h2>{isEmployee ? (language === 'he' ? 'המשימות שלי' : 'My Tasks') : (language === 'he' ? 'משימות' : 'Tasks')}</h2>
                     <p>{filteredTasks.length} {language === 'he' ? 'משימות' : 'tasks'}</p>
+                </div>
+                <div className="header-actions">
+                    <button
+                        className={`btn btn-outline groups-btn ${showGroupView ? 'active' : ''}`}
+                        onClick={() => setShowGroupView(!showGroupView)}
+                    >
+                        <Users size={18} />
+                        {language === 'he' ? 'קבוצות' : 'Groups'}
+                    </button>
+                    {showGroupView && (
+                        <button className="btn btn-outline" onClick={() => setShowAddGroupModal(true)}>
+                            <FolderPlus size={18} />
+                            {language === 'he' ? 'קבוצה חדשה' : 'New Group'}
+                        </button>
+                    )}
+                    {!showGroupView && (
+                        <ViewSwitcher
+                            currentView={currentView}
+                            onViewChange={setCurrentView}
+                            language={language}
+                            availableViews={[VIEW_TYPES.KANBAN, VIEW_TYPES.GRID, VIEW_TYPES.LIST, VIEW_TYPES.TABLE]}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -221,94 +789,8 @@ function Tasks({ currentUser, t, language }) {
                 )}
             </div>
 
-            {/* Tasks Grid */}
-            <div className="tasks-grid">
-                {filteredTasks.map(task => {
-                    const StatusIcon = statusIcons[task.status] || Circle;
-                    return (
-                        <div key={task.id} className="task-card glass-card">
-                            <div className="task-header">
-                                <div
-                                    className="task-status-badge"
-                                    style={{
-                                        background: `${statusColors[task.status] || '#8888a0'}20`,
-                                        color: statusColors[task.status] || '#8888a0'
-                                    }}
-                                >
-                                    <StatusIcon size={14} />
-                                    {statusLabels[task.status] || task.status}
-                                </div>
-                                {task.department && (
-                                    <div
-                                        className="task-dept-badge"
-                                        style={{
-                                            background: `${task.department.color || '#667eea'}20`,
-                                            color: task.department.color || '#667eea'
-                                        }}
-                                    >
-                                        {task.department.name}
-                                    </div>
-                                )}
-                            </div>
-
-                            <h3 className="task-title">{task.workflowStep?.name || '-'}</h3>
-
-                            <div className="task-product">
-                                <Package size={16} />
-                                <span>{task.orderItem?.product?.name || '-'}</span>
-                            </div>
-
-                            <div className="task-order">
-                                <span className="order-number">{task.orderItem?.order?.orderNumber || '-'}</span>
-                                <span className="customer-name">{task.orderItem?.order?.customer?.name || '-'}</span>
-                            </div>
-
-                            {task.notes && (
-                                <p className="task-notes">{task.notes}</p>
-                            )}
-
-                            <div className="task-footer">
-                                <div className="task-duration">
-                                    <Clock size={14} />
-                                    {task.workflowStep?.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}
-                                </div>
-
-                                {task.assignedTo ? (
-                                    <div className="task-assignee">
-                                        <div
-                                            className="assignee-avatar"
-                                            style={{ background: task.department?.color || 'var(--primary)' }}
-                                        >
-                                            {task.assignedTo.firstName?.[0] || 'U'}
-                                        </div>
-                                        <span>{task.assignedTo.firstName}</span>
-                                    </div>
-                                ) : (
-                                    <button className="assign-btn" onClick={() => handleAssign(task.id, currentUser?.id)}>
-                                        <User size={14} />
-                                        {language === 'he' ? 'הקצאה' : 'Assign'}
-                                    </button>
-                                )}
-                            </div>
-
-                            {task.status !== 'COMPLETED' && task.status !== 'CANCELLED' && (
-                                <div className="task-actions">
-                                    {task.status === 'PENDING' && (
-                                        <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'IN_PROGRESS')}>
-                                            {language === 'he' ? 'התחל עבודה' : 'Start Work'}
-                                        </button>
-                                    )}
-                                    {task.status === 'IN_PROGRESS' && (
-                                        <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'COMPLETED')}>
-                                            {language === 'he' ? 'סיום משימה' : 'Complete'}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
+            {/* Tasks Content */}
+            {renderContent()}
 
             {filteredTasks.length === 0 && (
                 <div className="empty-state glass-card">
@@ -317,6 +799,31 @@ function Tasks({ currentUser, t, language }) {
                     <p>{language === 'he' ? 'לא נמצאו משימות התואמות לסינון' : 'No tasks match the current filter'}</p>
                 </div>
             )}
+
+            {/* Add Group Modal */}
+            <Modal isOpen={showAddGroupModal} onClose={() => setShowAddGroupModal(false)} title={language === 'he' ? 'קבוצה חדשה' : 'New Group'} size="small">
+                <div className="modal-form">
+                    <div className="form-group">
+                        <label>{language === 'he' ? 'שם הקבוצה' : 'Group Name'}</label>
+                        <input
+                            type="text"
+                            className="form-input"
+                            value={newGroupName}
+                            onChange={(e) => setNewGroupName(e.target.value)}
+                            placeholder={language === 'he' ? 'הכנס שם לקבוצה...' : 'Enter group name...'}
+                        />
+                    </div>
+                    <div className="modal-actions">
+                        <button className="btn btn-outline" onClick={() => setShowAddGroupModal(false)}>
+                            {language === 'he' ? 'ביטול' : 'Cancel'}
+                        </button>
+                        <button className="btn btn-primary" onClick={addGroup}>
+                            <FolderPlus size={16} />
+                            {language === 'he' ? 'צור קבוצה' : 'Create Group'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }

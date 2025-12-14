@@ -18,9 +18,14 @@ import {
   Menu,
   X,
   LogOut,
-  Globe
+  Globe,
+  Moon,
+  Sun,
+  Upload,
+  Target
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { getNavItemsForRole } from './data/mockData';
 import { translations, getUserLanguage, ukrainianDepartments } from './data/translations';
 import Dashboard from './pages/Dashboard';
@@ -36,6 +41,8 @@ import Analytics from './pages/Analytics';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
+import ImportPage from './pages/ImportPage';
+import Leads from './pages/Leads';
 import './App.css';
 
 // Language Context
@@ -60,7 +67,9 @@ const iconMap = {
   Calendar,
   BarChart3,
   UserCog,
-  Settings
+  Settings,
+  Upload,
+  Target
 };
 
 // Protected Route Component
@@ -87,6 +96,7 @@ function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   // Language based on user's department (auto-detect) or manual override
   const autoLanguage = user ? getUserLanguage(user) : 'he';
@@ -215,6 +225,15 @@ function AppContent() {
                 )}
               </div>
 
+              {/* Theme Toggle */}
+              <button
+                className="theme-toggle-btn"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+              </button>
+
               <div className="search-box">
                 <Search size={18} />
                 <input type="text" placeholder={t('search')} />
@@ -249,9 +268,19 @@ function AppContent() {
                   <Dashboard currentUser={currentUser} t={t} language={language} />
                 </ProtectedRoute>
               } />
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <Dashboard currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
               <Route path="/customers" element={
                 <ProtectedRoute>
                   <Customers currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/leads" element={
+                <ProtectedRoute>
+                  <Leads currentUser={currentUser} t={t} language={language} />
                 </ProtectedRoute>
               } />
               <Route path="/products" element={
@@ -305,6 +334,11 @@ function AppContent() {
                 </ProtectedRoute>
               } />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/import" element={
+                <ProtectedRoute>
+                  <ImportPage currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
             </Routes>
           </main>
         </div>
@@ -316,9 +350,11 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ThemeProvider>
     </Router>
   );
 }

@@ -243,6 +243,38 @@
   color: var(--text-tertiary);
 }
 
+/* Theme Toggle Button */
+.theme-toggle-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.theme-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--warning);
+  border-color: var(--warning);
+  transform: rotate(15deg);
+}
+
+.theme-toggle-btn:active {
+  transform: rotate(0deg) scale(0.95);
+}
+
+/* Light theme specific adjustments for toggle */
+[data-theme="light"] .theme-toggle-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
 /* Role Switcher */
 .role-switcher {
   position: relative;

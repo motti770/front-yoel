@@ -1,0 +1,408 @@
+/* GroupedBoard - Monday.com Style Groups */
+
+.grouped-board {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Groups Toolbar */
+.groups-toolbar {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) 0;
+}
+
+.hide-empty-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 0.5rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.hide-empty-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.hide-empty-btn.active {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.hidden-groups-count {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+}
+
+/* Group Section */
+.group-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: all var(--transition-base);
+}
+
+.group-section.drag-over {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.group-section.ungrouped {
+    border-style: dashed;
+    background: var(--bg-secondary);
+}
+
+/* Group Header */
+.group-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+}
+
+.group-header.ungrouped-header {
+    background: transparent;
+}
+
+.group-collapse-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.group-collapse-btn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.group-color-bar {
+    width: 4px;
+    height: 24px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.group-name {
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: default;
+}
+
+.group-name-input {
+    font-weight: 700;
+    font-size: 1rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-md);
+    padding: 0.25rem 0.5rem;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.group-count {
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+    margin-right: auto;
+}
+
+[dir="ltr"] .group-count {
+    margin-right: 0;
+    margin-left: auto;
+}
+
+.group-actions {
+    display: flex;
+    gap: 0.25rem;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.group-header:hover .group-actions {
+    opacity: 1;
+}
+
+.group-action-btn {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-md);
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.group-action-btn:hover {
+    background: var(--bg-hover);
+    color: var(--primary);
+}
+
+.group-action-btn.danger:hover {
+    color: var(--danger);
+}
+
+/* Color Picker Dropdown */
+.color-picker-dropdown {
+    position: absolute;
+    top: 100%;
+    right: var(--spacing-lg);
+    z-index: 100;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.5rem;
+    padding: var(--spacing-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+}
+
+[dir="ltr"] .color-picker-dropdown {
+    right: auto;
+    left: var(--spacing-lg);
+}
+
+.color-option {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-md);
+    border: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    transition: all var(--transition-base);
+}
+
+.color-option:hover {
+    transform: scale(1.15);
+}
+
+.color-option.selected {
+    border-color: white;
+    box-shadow: 0 0 0 2px var(--primary);
+}
+
+/* Group Items */
+.group-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.group-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card);
+    transition: all var(--transition-base);
+}
+
+.group-item:last-child {
+    border-bottom: none;
+}
+
+.group-item:hover {
+    background: var(--bg-hover);
+}
+
+.group-item.dragging {
+    opacity: 0.5;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.item-drag-handle {
+    color: var(--text-tertiary);
+    cursor: grab;
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.group-item:hover .item-drag-handle {
+    opacity: 1;
+}
+
+.item-drag-handle:active {
+    cursor: grabbing;
+}
+
+/* Empty Group */
+.group-empty {
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+    background: var(--bg-secondary);
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    margin: var(--spacing-md);
+}
+
+/* Add Group Button */
+.add-group-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    width: 100%;
+    padding: var(--spacing-lg);
+    background: transparent;
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-xl);
+    color: var(--text-tertiary);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+}
+
+.add-group-btn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: rgba(102, 126, 234, 0.05);
+}
+
+/* New Group Input */
+.new-group-input-container {
+    display: flex;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--bg-card);
+    border: 2px solid var(--primary);
+    border-radius: var(--radius-xl);
+}
+
+.new-group-input {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+}
+
+.new-group-input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* Empty State */
+.board-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-3xl);
+    text-align: center;
+    color: var(--text-tertiary);
+}
+
+.board-empty-state svg {
+    margin-bottom: var(--spacing-lg);
+    opacity: 0.5;
+}
+
+.board-empty-state p {
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Item Content - Flexible row layout */
+.group-item-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-lg);
+}
+
+.group-item-content .item-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.group-item-content .item-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    flex-shrink: 0;
+}
+
+/* Light Theme */
+[data-theme="light"] .group-section {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .group-header {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="light"] .group-item {
+    background: #ffffff;
+}
+
+[data-theme="light"] .group-item:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+[data-theme="light"] .color-picker-dropdown {
+    background: #ffffff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .group-empty {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .group-header {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .group-item {
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+
+    .group-actions {
+        opacity: 1;
+    }
+
+    .item-drag-handle {
+        opacity: 1;
+    }
+
+    .color-picker-dropdown {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%);
+    }
+}

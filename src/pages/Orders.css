@@ -14,6 +14,7 @@
     font-size: 1.75rem;
     font-weight: 700;
     background: var(--primary-gradient);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin: 0;
@@ -585,6 +586,17 @@
     align-items: center;
 }
 
+.order-item-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+    padding: var(--spacing-md);
+    background: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-md);
+}
+
 .order-item-row .form-select {
     flex: 2;
 }
@@ -779,4 +791,71 @@
         flex-direction: column;
         width: 100%;
     }
+}
+
+/* ============ LIGHT THEME ADJUSTMENTS ============ */
+[data-theme="light"] .orders-page .glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .data-table th {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="light"] .data-table tbody tr:hover {
+    background: rgba(102, 126, 234, 0.05);
+}
+
+[data-theme="light"] .toolbar {
+    background: rgba(255, 255, 255, 0.9);
+}
+
+[data-theme="light"] .search-input,
+[data-theme="light"] .filter-select {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="light"] .kanban-column {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .kanban-card {
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .order-card {
+    background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .order-item-block {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="light"] .order-summary {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="light"] .calendar-day {
+    background: rgba(255, 255, 255, 0.8);
+}
+
+[data-theme="light"] .action-btn {
+    background: var(--bg-tertiary);
+}
+
+[data-theme="light"] .toast {
+    background: #ffffff;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .toast.success {
+    background: rgba(5, 150, 105, 0.08);
+    color: var(--success);
+}
+
+[data-theme="light"] .toast.error {
+    background: rgba(220, 38, 38, 0.08);
+    color: var(--danger);
 }

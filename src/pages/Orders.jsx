@@ -9,18 +9,23 @@ import {
     Trash2,
     ChevronDown,
     ChevronUp,
+    ChevronRight,
     Package,
     User,
+    Users,
     Calendar,
     Clock,
     Check,
     AlertTriangle,
     FileText,
-    Loader2
+    Loader2,
+    FolderPlus,
+    GripVertical
 } from 'lucide-react';
 import { ordersService, customersService, productsService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
+import ProductConfigurator from '../components/ProductConfigurator';
 import './Orders.css';
 
 function Orders({ currentUser, t, language }) {
@@ -34,6 +39,17 @@ function Orders({ currentUser, t, language }) {
     const [expandedOrder, setExpandedOrder] = useState(null);
     const [currentView, setCurrentView] = useState(VIEW_TYPES.TABLE);
 
+    // Groups state
+    const [groups, setGroups] = useState([
+        { id: 'group-1', name: language === 'he' ? 'דחוף' : 'Priority', color: '#ff6b6b', orderIds: [], collapsed: false },
+        { id: 'group-2', name: language === 'he' ? 'השבוע' : 'This Week', color: '#4facfe', orderIds: [], collapsed: false },
+        { id: 'group-3', name: language === 'he' ? 'ממתין ללקוח' : 'Customer Waiting', color: '#fee140', orderIds: [], collapsed: false }
+    ]);
+    const [showGroupView, setShowGroupView] = useState(false);
+    const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
+    const [draggedOrder, setDraggedOrder] = useState(null);
+
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
     const [showViewModal, setShowViewModal] = useState(false);
@@ -45,7 +61,7 @@ function Orders({ currentUser, t, language }) {
     // New order form
     const [newOrderForm, setNewOrderForm] = useState({
         customerId: '',
-        items: [{ productId: '', quantity: 1, unitPrice: 0 }],
+        items: [{ productId: '', quantity: 1, unitPrice: 0, selectedParameters: [] }],
         notes: ''
     });
 
@@ -143,7 +159,7 @@ function Orders({ currentUser, t, language }) {
     const addOrderItem = () => {
         setNewOrderForm({
             ...newOrderForm,
-            items: [...newOrderForm.items, { productId: '', quantity: 1, unitPrice: 0 }]
+            items: [...newOrderForm.items, { productId: '', quantity: 1, unitPrice: 0, selectedParameters: [] }]
         });
     };
 
@@ -161,7 +177,8 @@ function Orders({ currentUser, t, language }) {
                 items: newOrderForm.items.filter(i => i.productId).map(item => ({
                     productId: item.productId,
                     quantity: item.quantity,
-                    unitPrice: item.unitPrice
+                    unitPrice: item.unitPrice,
+                    selectedParameters: item.selectedParameters || []
                 })),
                 notes: newOrderForm.notes
             };
@@ -170,7 +187,7 @@ function Orders({ currentUser, t, language }) {
             if (result.success) {
                 setOrders([result.data, ...orders]);
                 setShowAddModal(false);
-                setNewOrderForm({ customerId: '', items: [{ productId: '', quantity: 1, unitPrice: 0 }], notes: '' });
+                setNewOrderForm({ customerId: '', items: [{ productId: '', quantity: 1, unitPrice: 0, selectedParameters: [] }], notes: '' });
                 showToast(t?.('orderCreated') || 'Order created successfully!');
             } else {
                 showToast(result.error?.message || 'Failed to create order', 'error');
@@ -180,6 +197,68 @@ function Orders({ currentUser, t, language }) {
         } finally {
             setSaving(false);
         }
+    };
+
+    // Group handlers
+    const addGroup = () => {
+        if (!newGroupName.trim()) return;
+        const newGroup = {
+            id: `group-${Date.now()}`,
+            name: newGroupName,
+            color: `hsl(${Math.random() * 360}, 70%, 60%)`,
+            orderIds: [],
+            collapsed: false
+        };
+        setGroups([...groups, newGroup]);
+        setNewGroupName('');
+        setShowAddGroupModal(false);
+        showToast(language === 'he' ? 'קבוצה נוצרה' : 'Group created');
+    };
+
+    const toggleGroupCollapse = (groupId) => {
+        setGroups(groups.map(g =>
+            g.id === groupId ? { ...g, collapsed: !g.collapsed } : g
+        ));
+    };
+
+    const moveOrderToGroup = (orderId, targetGroupId) => {
+        setGroups(groups.map(g => ({
+            ...g,
+            orderIds: g.id === targetGroupId
+                ? [...g.orderIds.filter(id => id !== orderId), orderId]
+                : g.orderIds.filter(id => id !== orderId)
+        })));
+        showToast(language === 'he' ? 'הזמנה הועברה' : 'Order moved');
+    };
+
+    const deleteGroup = (groupId) => {
+        setGroups(groups.filter(g => g.id !== groupId));
+        showToast(language === 'he' ? 'קבוצה נמחקה' : 'Group deleted');
+    };
+
+    // Drag & Drop handlers
+    const handleDragStart = (e, orderId) => {
+        setDraggedOrder(orderId);
+        e.dataTransfer.effectAllowed = 'move';
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    const handleDrop = (e, groupId) => {
+        e.preventDefault();
+        if (draggedOrder) {
+            moveOrderToGroup(draggedOrder, groupId);
+            setDraggedOrder(null);
+        }
+    };
+
+    // Get ungrouped orders
+    const getUngroupedOrders = () => {
+        const allGroupedIds = groups.flatMap(g => g.orderIds);
+        return filteredOrders.filter(o => !allGroupedIds.includes(o.id));
     };
 
     // Loading state
@@ -610,41 +689,65 @@ function Orders({ currentUser, t, language }) {
                     {/* Step 2: Items */}
                     <div className="wizard-section">
                         <h4><Package size={18} /> {t?.('items') || 'Items'}</h4>
-                        {newOrderForm.items.map((item, idx) => (
-                            <div key={idx} className="order-item-row">
-                                <select
-                                    className="form-select"
-                                    value={item.productId}
-                                    onChange={(e) => {
-                                        const product = products.find(p => p.id === e.target.value);
-                                        const newItems = [...newOrderForm.items];
-                                        newItems[idx] = {
-                                            ...newItems[idx],
-                                            productId: e.target.value,
-                                            unitPrice: product?.price || 0
-                                        };
-                                        setNewOrderForm({ ...newOrderForm, items: newItems });
-                                    }}
-                                >
-                                    <option value="">{language === 'he' ? 'בחר מוצר...' : 'Select product...'}</option>
-                                    {products.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name} - ${(p.price || 0).toLocaleString()}</option>
-                                    ))}
-                                </select>
-                                <input
-                                    type="number"
-                                    className="form-input quantity-input"
-                                    min="1"
-                                    value={item.quantity}
-                                    onChange={(e) => {
-                                        const newItems = [...newOrderForm.items];
-                                        newItems[idx].quantity = parseInt(e.target.value) || 1;
-                                        setNewOrderForm({ ...newOrderForm, items: newItems });
-                                    }}
-                                />
-                                <span className="item-price">${(item.unitPrice * item.quantity).toLocaleString()}</span>
-                            </div>
-                        ))}
+                        {newOrderForm.items.map((item, idx) => {
+                            const selectedProduct = products.find(p => p.id === item.productId);
+
+                            return (
+                                <div key={idx} className="order-item-block">
+                                    <div className="order-item-row">
+                                        <select
+                                            className="form-select"
+                                            value={item.productId}
+                                            onChange={(e) => {
+                                                const product = products.find(p => p.id === e.target.value);
+                                                const newItems = [...newOrderForm.items];
+                                                newItems[idx] = {
+                                                    ...newItems[idx],
+                                                    productId: e.target.value,
+                                                    unitPrice: product?.price || 0,
+                                                    selectedParameters: []
+                                                };
+                                                setNewOrderForm({ ...newOrderForm, items: newItems });
+                                            }}
+                                        >
+                                            <option value="">{language === 'he' ? 'בחר מוצר...' : 'Select product...'}</option>
+                                            {products.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name} - ${(p.price || 0).toLocaleString()}</option>
+                                            ))}
+                                        </select>
+                                        <input
+                                            type="number"
+                                            className="form-input quantity-input"
+                                            min="1"
+                                            value={item.quantity}
+                                            onChange={(e) => {
+                                                const newItems = [...newOrderForm.items];
+                                                newItems[idx].quantity = parseInt(e.target.value) || 1;
+                                                setNewOrderForm({ ...newOrderForm, items: newItems });
+                                            }}
+                                        />
+                                        <span className="item-price">${(item.unitPrice * item.quantity).toLocaleString()}</span>
+                                    </div>
+
+                                    {/* Product Configurator */}
+                                    {selectedProduct && (
+                                        <ProductConfigurator
+                                            product={selectedProduct}
+                                            language={language}
+                                            onConfigurationChange={(config) => {
+                                                const newItems = [...newOrderForm.items];
+                                                newItems[idx] = {
+                                                    ...newItems[idx],
+                                                    selectedParameters: config.selectedParameters,
+                                                    unitPrice: parseFloat(config.finalPrice) || item.unitPrice
+                                                };
+                                                setNewOrderForm({ ...newOrderForm, items: newItems });
+                                            }}
+                                        />
+                                    )}
+                                </div>
+                            );
+                        })}
                         <button className="btn btn-outline btn-sm" onClick={addOrderItem}>
                             <Plus size={14} /> {language === 'he' ? 'הוסף מוצר' : 'Add Product'}
                         </button>

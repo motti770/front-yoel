@@ -25,11 +25,14 @@ import {
     Kanban,
     GitBranch,
     Calendar as CalendarIcon,
-    Loader2
+    Loader2,
+    Upload
 } from 'lucide-react';
 import { customersService } from '../services/api';
 import Modal from '../components/Modal';
 import ExportDropdown from '../components/ExportDropdown';
+import GroupedBoard from '../components/GroupedBoard';
+import BulkImporter from '../components/BulkImporter';
 import './Customers.css';
 
 // View types
@@ -51,14 +54,29 @@ function Customers({ currentUser, t, language }) {
     const [statusFilter, setStatusFilter] = useState('all');
     const [currentView, setCurrentView] = useState(VIEW_TYPES.TABLE);
 
-    // Groups state
-    const [groups, setGroups] = useState([
-        { id: 'group-1', name: 'VIP', color: '#667eea', customerIds: [], collapsed: false },
-        { id: 'group-2', name: 'New Customers', color: '#00f2fe', customerIds: [], collapsed: false },
-        { id: 'group-3', name: 'Inactive', color: '#8888a0', customerIds: [], collapsed: false }
-    ]);
+    // Groups state - load from localStorage
+    const [groups, setGroups] = useState(() => {
+        const saved = localStorage.getItem('customers-groups');
+        if (saved) {
+            try {
+                return JSON.parse(saved);
+            } catch (e) {
+                console.error('Failed to parse groups', e);
+            }
+        }
+        return [
+            { id: 'group-1', name: 'VIP', color: '#667eea', itemIds: [], collapsed: false },
+            { id: 'group-2', name: language === 'he' ? 'לקוחות חדשים' : 'New Customers', color: '#00f2fe', itemIds: [], collapsed: false },
+            { id: 'group-3', name: language === 'he' ? 'לא פעילים' : 'Inactive', color: '#8888a0', itemIds: [], collapsed: false }
+        ];
+    });
     const [showGroupView, setShowGroupView] = useState(false);
     const [newGroupName, setNewGroupName] = useState('');
+
+    // Save groups to localStorage when they change
+    useEffect(() => {
+        localStorage.setItem('customers-groups', JSON.stringify(groups));
+    }, [groups]);
 
     // Advanced filters state
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -71,6 +89,7 @@ function Customers({ currentUser, t, language }) {
     const [showViewModal, setShowViewModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+    const [showImportModal, setShowImportModal] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [selectedCustomers, setSelectedCustomers] = useState([]);
     const [toast, setToast] = useState(null);
@@ -391,13 +410,59 @@ function Customers({ currentUser, t, language }) {
         );
     }
 
-    // Render content based on view type
+    // Render a single customer item (used by GroupedBoard)
+    const renderCustomerItem = (customer) => (
+        <div className="group-item-content" onClick={() => handleView(customer)}>
+            <div className="item-main">
+                <div className="customer-row">
+                    <div className="customer-avatar">
+                        <Building2 size={16} />
+                    </div>
+                    <div className="customer-info-compact">
+                        <span className="customer-name">{customer.name}</span>
+                        <span className="customer-company">{customer.companyName || '-'}</span>
+                    </div>
+                </div>
+            </div>
+            <div className="item-meta">
+                <span className="customer-email">{customer.email}</span>
+                <span className="customer-phone">{customer.phone || '-'}</span>
+                <span
+                    className="status-badge"
+                    style={{ background: `${statusColors[customer.status]}20`, color: statusColors[customer.status] }}
+                >
+                    {customer.status === 'ACTIVE' ? t('active') : t('inactive')}
+                </span>
+                <div className="action-buttons">
+                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(customer); }}><Edit size={14} /></button>
+                    <button className="action-btn danger" onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); setShowDeleteModal(true); }}><Trash2 size={14} /></button>
+                </div>
+            </div>
+        </div>
+    );
+
+    // Render content based on view type - now properly switching views
     const renderContent = () => {
+        // If group view is active, show GroupedBoard
         if (showGroupView) {
-            return renderGroupsView();
+            return (
+                <GroupedBoard
+                    items={filteredCustomers}
+                    groups={groups}
+                    onGroupsChange={setGroups}
+                    renderItem={renderCustomerItem}
+                    itemIdField="id"
+                    language={language}
+                    emptyStateIcon={<Users size={48} />}
+                    emptyStateText={language === 'he' ? 'לא נמצאו לקוחות' : 'No customers found'}
+                />
+            );
         }
 
+        // Otherwise, render based on currentView
         switch (currentView) {
+            case VIEW_TYPES.TABLE:
+                return renderTableView();
             case VIEW_TYPES.GRID:
                 return renderGridView();
             case VIEW_TYPES.LIST:
@@ -816,10 +881,16 @@ function Customers({ currentUser, t, language }) {
                         </button>
                     </div>
 
-                    <button className="btn btn-primary" onClick={() => { setSelectedCustomer(null); setFormData({ name: '', email: '', phone: '', companyName: '', status: 'ACTIVE' }); setShowAddModal(true); }}>
-                        <Plus size={18} />
-                        {t('newCustomer')}
-                    </button>
+                    <div className="header-actions">
+                        <button className="btn btn-outline" onClick={() => setShowImportModal(true)}>
+                            <Upload size={18} />
+                            {language === 'he' ? 'ייבוא' : 'Import'}
+                        </button>
+                        <button className="btn btn-primary" onClick={() => { setSelectedCustomer(null); setFormData({ name: '', email: '', phone: '', companyName: '', status: 'ACTIVE' }); setShowAddModal(true); }}>
+                            <Plus size={18} />
+                            {t('newCustomer')}
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -1056,6 +1127,36 @@ function Customers({ currentUser, t, language }) {
                         <button className="btn btn-primary" onClick={addGroup}><Check size={16} />{language === 'he' ? 'צור קבוצה' : 'Create'}</button>
                     </div>
                 </div>
+            </Modal>
+
+            {/* Import Modal */}
+            <Modal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                title=""
+                size="large"
+                hideHeader
+            >
+                <BulkImporter
+                    entityType="customers"
+                    targetFields={[
+                        { key: 'name', label: language === 'he' ? 'שם לקוח' : 'Customer Name', type: 'text', required: true },
+                        { key: 'email', label: language === 'he' ? 'אימייל' : 'Email', type: 'email', required: true },
+                        { key: 'phone', label: language === 'he' ? 'טלפון' : 'Phone', type: 'tel', required: false },
+                        { key: 'companyName', label: language === 'he' ? 'חברה' : 'Company', type: 'text', required: false },
+                        { key: 'status', label: language === 'he' ? 'סטטוס' : 'Status', type: 'select', required: false }
+                    ]}
+                    onImport={async (data) => {
+                        const result = await customersService.create(data);
+                        if (!result.success) throw new Error(result.error?.message);
+                        return result.data;
+                    }}
+                    language={language}
+                    onClose={() => {
+                        setShowImportModal(false);
+                        fetchCustomers(); // Refresh data after import
+                    }}
+                />
             </Modal>
         </div>
     );
