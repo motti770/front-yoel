@@ -1,12 +1,12 @@
 /**
  * API Service Layer
- * Connects to the real CRM API at https://api.the-shul.com
+ * Connects to the real CRM API at https://crm-api.app.mottidokib.com
  */
 
 import axios from 'axios';
 
 // API Configuration
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.the-shul.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://crm-api.app.mottidokib.com';
 
 // Create axios instance
 const api = axios.create({
