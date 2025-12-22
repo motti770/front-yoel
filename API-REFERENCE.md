@@ -4,7 +4,7 @@ Email:	admin@yoel.com
 Password:	Admin1234
 Role:	ADMIN
 **Version:** 2.0.0
-**Production URL:** `https://api.the-shul.com`
+**Production URL:** `https://crm-api.app.mottidokib.com`
 **Alternative URL:** `https://srv1156979.hstgr.cloud`
 **Development URL:** `http://localhost:3000`
 **Last Updated:** 2025-12-06 (HTTPS Deployment + Security Hardening)
@@ -39,7 +39,7 @@ Role:	ADMIN
 
 ### Production Environment
 All production requests **MUST** use HTTPS for security:
-- ✅ **Use:** `https://api.the-shul.com` or `https://srv1156979.hstgr.cloud`
+- ✅ **Use:** `https://crm-api.app.mottidokib.com` or `https://srv1156979.hstgr.cloud`
 - ❌ **Don't use:** `http://` in production
 
 ### Security Features
@@ -53,7 +53,7 @@ All production requests **MUST** use HTTPS for security:
 For local development, you can use:
 - `http://localhost:3000` (no SSL required)
 
-**Note:** All code examples in this document use `https://api.the-shul.com` for production. Replace with `http://localhost:3000` for local development.
+**Note:** All code examples in this document use `https://crm-api.app.mottidokib.com` for production. Replace with `http://localhost:3000` for local development.
 
 ---
 
@@ -71,7 +71,7 @@ Authorization: Bearer <your-jwt-token>
 **Getting a Token:**
 ```bash
 # Production
-curl -X POST https://api.the-shul.com/auth/login \
+curl -X POST https://crm-api.app.mottidokib.com/auth/login \
   -H "Content-Type: application/json" \
   -d '{"email":"admin@yoel.com","password":"Admin1234"}'
 
@@ -119,7 +119,7 @@ API Keys are long-lived credentials that can be created and managed through the 
 **Example Usage:**
 ```bash
 # Production
-curl -H "X-API-Key: crm_live_abc123..." https://api.the-shul.com/customers
+curl -H "X-API-Key: crm_live_abc123..." https://crm-api.app.mottidokib.com/customers
 
 # Development
 curl -H "X-API-Key: crm_live_abc123..." http://localhost:3000/customers
@@ -1866,7 +1866,7 @@ For issues or questions:
 ## Production Infrastructure
 
 ### Servers
-- **Primary:** https://api.the-shul.com (Custom domain)
+- **Primary:** https://crm-api.app.mottidokib.com (Custom domain)
 - **Secondary:** https://srv1156979.hstgr.cloud (Hostinger domain)
 - **IP Address:** 72.61.189.144
 
@@ -1885,5 +1885,5 @@ Internet → Nginx (Reverse Proxy + SSL Termination)
 ```
 
 ### Uptime & Monitoring
-- Health Check: `https://api.the-shul.com/health`
+- Health Check: `https://crm-api.app.mottidokib.com/health`
 - Expected Response: `{"success":true,"data":{"status":"OK"}}`

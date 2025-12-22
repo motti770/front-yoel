@@ -441,7 +441,7 @@ function ProductDetailModal({
                             <div key={file.id} className="file-card">
                                 {file.mimeType?.startsWith('image/') ? (
                                     <div className="file-preview image">
-                                        <img src={`https://api.the-shul.com/files/${file.id}/download`} alt={file.originalName} />
+                                        <img src={`https://crm-api.app.mottidokib.com/files/${file.id}/download`} alt={file.originalName} />
                                     </div>
                                 ) : (
                                     <div className="file-preview doc">
@@ -459,7 +459,7 @@ function ProductDetailModal({
                                 <div className="file-actions">
                                     <button
                                         className="action-btn"
-                                        onClick={() => window.open(`https://api.the-shul.com/files/${file.id}/download`, '_blank')}
+                                        onClick={() => window.open(`https://crm-api.app.mottidokib.com/files/${file.id}/download`, '_blank')}
                                     >
                                         <ExternalLink size={14} />
                                     </button>

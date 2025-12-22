@@ -50,7 +50,7 @@ npm run build
 
 ## API Configuration
 
-The frontend connects to the CRM API at `https://api.the-shul.com`
+The frontend connects to the CRM API at `https://crm-api.app.mottidokib.com`
 
 To use a different API URL, create a `.env` file:
 ```env

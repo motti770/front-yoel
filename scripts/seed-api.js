@@ -4,7 +4,7 @@
  * Run with: node scripts/seed-api.js
  */
 
-const API_URL = 'https://api.the-shul.com';
+const API_URL = 'https://crm-api.app.mottidokib.com';
 const ADMIN_EMAIL = 'admin@yoel.com';
 const ADMIN_PASSWORD = 'Admin1234';
 
