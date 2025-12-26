@@ -23,7 +23,12 @@ import {
   Sun,
   Upload,
   Target,
-  FolderOpen
+  Target,
+  FolderOpen,
+  ChevronDown,
+  User,
+  Info,
+  AlertTriangle
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';

@@ -47,6 +47,52 @@ function UsersPage({ currentUser }) {
         EMPLOYEE: 'עובד'
     };
 
+    // Modal state
+    const [showModal, setShowModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
+        email: '',
+        role: 'EMPLOYEE',
+        phone: '',
+        password: '' // Only for new users
+    });
+
+    const openAddModal = () => {
+        setSelectedUser(null);
+        setFormData({
+            firstName: '',
+            lastName: '',
+            email: '',
+            role: 'EMPLOYEE',
+            phone: '',
+            password: ''
+        });
+        setShowModal(true);
+    };
+
+    const handleEdit = (user) => {
+        setSelectedUser(user);
+        setFormData({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+            phone: user.phone || '',
+            password: '' // Don't show password on edit
+        });
+        setShowModal(true);
+    };
+
+    const handleSave = () => {
+        // Here we would call the API to save/update user
+        console.log('Saving user:', formData);
+        setShowModal(false);
+        // Alert for now since we mocked it
+        alert('משתמש נשמר בהצלחה (דמו)');
+    };
+
     return (
         <div className="users-page">
             <div className="page-header">
@@ -54,7 +100,7 @@ function UsersPage({ currentUser }) {
                     <h2>ניהול משתמשים</h2>
                     <p>{filteredUsers.length} משתמשים</p>
                 </div>
-                <button className="btn btn-primary">
+                <button className="btn btn-primary" onClick={openAddModal}>
                     <Plus size={18} />
                     משתמש חדש
                 </button>
@@ -98,7 +144,7 @@ function UsersPage({ currentUser }) {
                                 className="user-avatar"
                                 style={{ background: roleColors[user.role] }}
                             >
-                                {user.avatar}
+                                {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                             </div>
                             <div
                                 className="user-role-badge"
@@ -137,11 +183,11 @@ function UsersPage({ currentUser }) {
                         )}
 
                         <div className="user-meta">
-                            <span>נוצר: {user.createdAt}</span>
+                            <span>נוצר: {user.createdAt || 'Before Time'}</span>
                         </div>
 
                         <div className="user-actions">
-                            <button className="action-btn">
+                            <button className="action-btn" onClick={() => handleEdit(user)}>
                                 <Edit size={16} />
                                 עריכה
                             </button>
@@ -154,6 +200,71 @@ function UsersPage({ currentUser }) {
                     </div>
                 ))}
             </div>
+
+            {/* Edit/Add Modal */}
+            {showModal && (
+                <div className="modal-overlay">
+                    <div className="modal-content glass-card">
+                        <div className="modal-header">
+                            <h3>{selectedUser ? 'עריכת משתמש' : 'משתמש חדש'}</h3>
+                            <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>שם פרטי</label>
+                                    <input
+                                        type="text"
+                                        value={formData.firstName}
+                                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label>שם משפחה</label>
+                                    <input
+                                        type="text"
+                                        value={formData.lastName}
+                                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>אימייל</label>
+                                <input
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>תפקיד</label>
+                                <select
+                                    value={formData.role}
+                                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                >
+                                    <option value="ADMIN">מנהל ראשי</option>
+                                    <option value="MANAGER">מנהל</option>
+                                    <option value="EMPLOYEE">עובד</option>
+                                </select>
+                            </div>
+                            {!selectedUser && (
+                                <div className="form-group">
+                                    <label>סיסמה זמנית</label>
+                                    <input
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-outline" onClick={() => setShowModal(false)}>ביטול</button>
+                            <button className="btn btn-primary" onClick={handleSave}>שמור</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Role Management Info */}
             <div className="roles-info glass-card">
