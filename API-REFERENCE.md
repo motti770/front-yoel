@@ -4,10 +4,10 @@ Email:	admin@yoel.com
 Password:	Admin1234
 Role:	ADMIN
 **Version:** 2.0.0
-**Production URL:** `https://crm-api.app.mottidokib.com`
-**Alternative URL:** `https://srv1156979.hstgr.cloud`
+**Frontend URL:** `https://the-shul.app.mottidokib.com`
+**API URL:** `https://crm-api.app.mottidokib.com`
 **Development URL:** `http://localhost:3000`
-**Last Updated:** 2025-12-06 (HTTPS Deployment + Security Hardening)
+**Last Updated:** 2025-12-26 (Database Migration to postgres-yoel)
 
 🔒 **Security Update:** This version includes comprehensive security improvements including XSS protection, IDOR prevention, rate limiting, security headers, and full HTTPS encryption.
 
@@ -39,7 +39,7 @@ Role:	ADMIN
 
 ### Production Environment
 All production requests **MUST** use HTTPS for security:
-- ✅ **Use:** `https://crm-api.app.mottidokib.com` or `https://srv1156979.hstgr.cloud`
+- ✅ **Use:** `https://crm-api.app.mottidokib.com`
 - ❌ **Don't use:** `http://` in production
 
 ### Security Features
