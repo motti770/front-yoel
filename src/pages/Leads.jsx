@@ -258,7 +258,9 @@ function Leads({ currentUser, t, language }) {
     const handleConvertToCustomer = async () => {
         try {
             setSaving(true);
-            // Try to use convert endpoint, fallback to creating customer manually
+            console.log('[Leads] converting lead:', selectedLead);
+
+            // Try to use convert endpoint first
             try {
                 const result = await leadsService.convert(selectedLead.id);
                 if (result.success) {
@@ -268,22 +270,36 @@ function Leads({ currentUser, t, language }) {
                     return;
                 }
             } catch (convertError) {
-                console.log('[Leads] Convert endpoint not available, creating customer manually');
+                console.log('[Leads] Convert endpoint failed, trying manual creation:', convertError);
             }
 
-            // Fallback: create customer from lead data
+            // Fallback: create customer manually
+            // Split name into first and last
+            const nameParts = (selectedLead.name || '').trim().split(' ');
+            const firstName = nameParts[0] || '';
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
             const customerData = {
-                name: selectedLead.name,
+                firstName: firstName,
+                lastName: lastName,
                 email: selectedLead.email,
                 phone: selectedLead.phone,
                 company: selectedLead.company,
-                notes: selectedLead.notes
+                notes: selectedLead.notes,
+                status: 'ACTIVE',
+                source: selectedLead.source
             };
+
+            console.log('[Leads] Creating customer with data:', customerData);
             const customerResult = await customersService.create(customerData);
+
             if (customerResult.success) {
-                // Update lead stage to WON
+                console.log('[Leads] Customer created successfully:', customerResult.data);
+
+                // Update lead stage only after successful customer creation
                 await leadsService.updateStage(selectedLead.id, 'WON');
                 setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, stage: 'WON' } : l));
+
                 setShowConvertModal(false);
                 showToast(language === 'he' ? 'ליד הומר ללקוח!' : 'Lead converted to customer!');
             } else {

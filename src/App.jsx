@@ -98,6 +98,8 @@ function ProtectedRoute({ children }) {
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -189,7 +191,11 @@ function AppContent() {
               <div className="language-switcher">
                 <button
                   className="language-btn"
-                  onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
+                  onClick={() => {
+                    setShowLanguageSwitcher(!showLanguageSwitcher);
+                    setShowNotifications(false);
+                    setShowProfileMenu(false);
+                  }}
                 >
                   <Globe size={18} />
                   <span>{language === 'he' ? 'עב' : language === 'uk' ? 'УК' : 'EN'}</span>
@@ -242,24 +248,96 @@ function AppContent() {
                 <input type="text" placeholder={t('search')} />
               </div>
 
-              <button className="icon-button">
-                <Bell size={20} />
-                <span className="notification-badge">3</span>
-              </button>
+              {/* Notifications */}
+              <div className="notifications-wrapper" style={{ position: 'relative' }}>
+                <button
+                  className="icon-button"
+                  onClick={() => {
+                    setShowNotifications(!showNotifications);
+                    setShowProfileMenu(false);
+                    setShowLanguageSwitcher(false);
+                  }}
+                >
+                  <Bell size={20} />
+                  <span className="notification-badge">3</span>
+                </button>
 
-              <div className="user-profile">
-                <div className="avatar" style={{ background: roleColors[currentUser.role] }}>
-                  {currentUser.firstName?.charAt(0) || ''}{currentUser.lastName?.charAt(0) || ''}
-                </div>
-                <div className="user-info">
-                  <span className="user-name">{currentUser.firstName} {currentUser.lastName}</span>
-                  <span className="user-role">{roleLabels[currentUser.role]}</span>
-                </div>
+                {showNotifications && (
+                  <div className="dropdown-menu notifications-dropdown">
+                    <div className="dropdown-header">
+                      <h3>{language === 'he' ? 'התראות' : 'Notifications'}</h3>
+                      <button className="text-btn">{language === 'he' ? 'סמן הכל כנקרא' : 'Mark all read'}</button>
+                    </div>
+                    <div className="dropdown-content">
+                      <div className="notification-item unread">
+                        <div className="notif-icon info"><Info size={16} /></div>
+                        <div className="notif-text">
+                          <p className="notif-title">{language === 'he' ? 'הזמנה חדשה התקבלה' : 'New order received'}</p>
+                          <p className="notif-time">{language === 'he' ? 'לפני 5 דקות' : '5 mins ago'}</p>
+                        </div>
+                      </div>
+                      <div className="notification-item unread">
+                        <div className="notif-icon warning"><AlertTriangle size={16} /></div>
+                        <div className="notif-text">
+                          <p className="notif-title">{language === 'he' ? 'מלאי בד נמוך' : 'Low fabric stock'}</p>
+                          <p className="notif-time">{language === 'he' ? 'לפני שעה' : '1 hour ago'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <button className="icon-button logout-btn" onClick={logout} title={t('logout')}>
-                <LogOut size={20} />
-              </button>
+              {/* User Profile */}
+              <div className="user-profile-wrapper" style={{ position: 'relative' }}>
+                <div
+                  className="user-profile"
+                  onClick={() => {
+                    setShowProfileMenu(!showProfileMenu);
+                    setShowNotifications(false);
+                    setShowLanguageSwitcher(false);
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className="avatar" style={{ background: roleColors[currentUser.role] }}>
+                    {currentUser.firstName?.charAt(0) || ''}{currentUser.lastName?.charAt(0) || ''}
+                  </div>
+                  <div className="user-info">
+                    <span className="user-name">{currentUser.firstName} {currentUser.lastName}</span>
+                    <span className="user-role">{roleLabels[currentUser.role]}</span>
+                  </div>
+                  <ChevronDown size={14} style={{ opacity: 0.5 }} />
+                </div>
+
+                {showProfileMenu && (
+                  <div className="dropdown-menu profile-dropdown">
+                    <div className="dropdown-header user-header">
+                      <div className="avatar large" style={{ background: roleColors[currentUser.role] }}>
+                        {currentUser.firstName?.charAt(0) || ''}{currentUser.lastName?.charAt(0) || ''}
+                      </div>
+                      <div className="user-details">
+                        <h4>{currentUser.firstName} {currentUser.lastName}</h4>
+                        <span>{currentUser.email}</span>
+                      </div>
+                    </div>
+                    <div className="dropdown-links">
+                      <button className="menu-item">
+                        <User size={16} />
+                        {language === 'he' ? 'הפרופיל שלי' : 'My Profile'}
+                      </button>
+                      <button className="menu-item">
+                        <Settings size={16} />
+                        {language === 'he' ? 'הגדרות' : 'Settings'}
+                      </button>
+                      <div className="divider"></div>
+                      <button className="menu-item danger" onClick={logout}>
+                        <LogOut size={16} />
+                        {t('logout')}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </header>
 
