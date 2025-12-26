@@ -28,8 +28,7 @@ import {
     ChevronRight,
     MoreHorizontal
 } from 'lucide-react';
-// API service not used yet - using mock data
-// import { leadsService, customersService } from '../services/api';
+import { leadsService, customersService } from '../services/api';
 import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
 import './Leads.css';
@@ -89,32 +88,30 @@ function Leads({ currentUser, t, language }) {
         nextFollowUp: ''
     });
 
-    // Fetch leads
+    // Fetch leads from API
     const fetchLeads = async () => {
         try {
             setLoading(true);
-            // For now, use mock data since leadsService might not exist
-            // In production, use: const result = await leadsService.getAll();
-            const mockLeads = generateMockLeads();
-            setLeads(mockLeads);
+            setError(null);
+            const result = await leadsService.getAll();
+            console.log('[Leads] API Response:', result);
+
+            if (result.success && result.data) {
+                // Handle both array and paginated response
+                const leadsData = Array.isArray(result.data) ? result.data : (result.data.items || result.data.leads || []);
+                setLeads(leadsData);
+            } else {
+                // Fallback to empty array if no data
+                setLeads([]);
+                console.warn('[Leads] No leads data in response');
+            }
         } catch (err) {
-            setError(err.message || 'Failed to load leads');
+            console.error('[Leads] Failed to fetch:', err);
+            setError(err.message || err.error?.message || 'Failed to load leads');
+            setLeads([]);
         } finally {
             setLoading(false);
         }
-    };
-
-    // Generate mock leads for demo
-    const generateMockLeads = () => {
-        return [
-            { id: 'lead-1', name: 'בית הכנסת המרכזי', email: 'info@central-shul.org', phone: '03-1234567', company: 'עמותת בית הכנסת המרכזי', source: 'WEBSITE', stage: 'NEW', estimatedValue: 50000, notes: 'התעניינו בפרוכת', nextFollowUp: '2024-12-20', createdAt: '2024-12-10', lastContact: null },
-            { id: 'lead-2', name: 'קהילת אור התורה', email: 'rabbi@orhatra.com', phone: '02-9876543', company: 'קהילת אור התורה ירושלים', source: 'REFERRAL', stage: 'CONTACTED', estimatedValue: 120000, notes: 'הרב מעוניין במעיל וכתר', nextFollowUp: '2024-12-18', createdAt: '2024-12-05', lastContact: '2024-12-12' },
-            { id: 'lead-3', name: 'ישיבת דברי חיים', email: 'office@divreichaim.edu', phone: '04-5551234', company: 'ישיבת דברי חיים', source: 'EVENT', stage: 'QUALIFIED', estimatedValue: 85000, notes: 'פגישה מתוכננת לשבוע הבא', nextFollowUp: '2024-12-16', createdAt: '2024-11-28', lastContact: '2024-12-10' },
-            { id: 'lead-4', name: 'בית מדרש נתיבות', email: 'admin@netivot.org', phone: '08-6667777', company: 'בית מדרש נתיבות באר שבע', source: 'COLD_CALL', stage: 'PROPOSAL', estimatedValue: 95000, notes: 'שלחנו הצעת מחיר, ממתינים לתשובה', nextFollowUp: '2024-12-15', createdAt: '2024-11-20', lastContact: '2024-12-08' },
-            { id: 'lead-5', name: 'קהילת שערי צדק', email: 'contact@shaarei.org', phone: '09-8889999', company: 'עמותת שערי צדק', source: 'SOCIAL', stage: 'NEGOTIATION', estimatedValue: 200000, notes: 'הזמנה גדולה, במשא ומתן על המחיר', nextFollowUp: '2024-12-14', createdAt: '2024-11-15', lastContact: '2024-12-11' },
-            { id: 'lead-6', name: 'בית הכנסת הספרדי', email: 'gabbai@sephardi.com', phone: '03-4445555', company: 'בית הכנסת הספרדי ת"א', source: 'WEBSITE', stage: 'WON', estimatedValue: 75000, notes: 'הזמנה אושרה!', nextFollowUp: null, createdAt: '2024-10-01', lastContact: '2024-12-01' },
-            { id: 'lead-7', name: 'קהילת אהבת ישראל', email: 'info@ahavat.org', phone: '02-1112222', company: 'קהילת אהבת ישראל', source: 'REFERRAL', stage: 'LOST', estimatedValue: 45000, notes: 'בחרו בספק אחר', nextFollowUp: null, createdAt: '2024-09-15', lastContact: '2024-11-20' }
-        ];
     };
 
     useEffect(() => {
@@ -194,23 +191,29 @@ function Leads({ currentUser, t, language }) {
 
         try {
             setSaving(true);
-            // In production: await leadsService.create/update
             if (selectedLead) {
-                setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, ...formData } : l));
-                showToast(language === 'he' ? 'ליד עודכן' : 'Lead updated');
+                // Update existing lead
+                const result = await leadsService.update(selectedLead.id, formData);
+                if (result.success) {
+                    setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, ...formData } : l));
+                    showToast(language === 'he' ? 'ליד עודכן' : 'Lead updated');
+                } else {
+                    throw new Error(result.error?.message || 'Failed to update');
+                }
             } else {
-                const newLead = {
-                    id: `lead-${Date.now()}`,
-                    ...formData,
-                    createdAt: new Date().toISOString().split('T')[0],
-                    lastContact: null
-                };
-                setLeads([newLead, ...leads]);
-                showToast(language === 'he' ? 'ליד נוסף' : 'Lead added');
+                // Create new lead
+                const result = await leadsService.create(formData);
+                if (result.success && result.data) {
+                    setLeads([result.data, ...leads]);
+                    showToast(language === 'he' ? 'ליד נוסף' : 'Lead added');
+                } else {
+                    throw new Error(result.error?.message || 'Failed to create');
+                }
             }
             setShowAddModal(false);
         } catch (err) {
-            showToast(err.message || 'Failed to save', 'error');
+            console.error('[Leads] Save error:', err);
+            showToast(err.message || err.error?.message || 'Failed to save', 'error');
         } finally {
             setSaving(false);
         }
@@ -219,34 +222,76 @@ function Leads({ currentUser, t, language }) {
     const handleDelete = async () => {
         try {
             setSaving(true);
-            // In production: await leadsService.delete(selectedLead.id)
-            setLeads(leads.filter(l => l.id !== selectedLead.id));
-            setShowDeleteModal(false);
-            showToast(language === 'he' ? 'ליד נמחק' : 'Lead deleted');
+            const result = await leadsService.delete(selectedLead.id);
+            if (result.success) {
+                setLeads(leads.filter(l => l.id !== selectedLead.id));
+                setShowDeleteModal(false);
+                showToast(language === 'he' ? 'ליד נמחק' : 'Lead deleted');
+            } else {
+                throw new Error(result.error?.message || 'Failed to delete');
+            }
         } catch (err) {
-            showToast(err.message || 'Failed to delete', 'error');
+            console.error('[Leads] Delete error:', err);
+            showToast(err.message || err.error?.message || 'Failed to delete', 'error');
         } finally {
             setSaving(false);
         }
     };
 
     // Move lead to next/previous stage
-    const moveLeadToStage = (leadId, newStage) => {
-        setLeads(leads.map(l => l.id === leadId ? { ...l, stage: newStage, lastContact: new Date().toISOString().split('T')[0] } : l));
-        showToast(language === 'he' ? 'שלב עודכן' : 'Stage updated');
+    const moveLeadToStage = async (leadId, newStage) => {
+        try {
+            const result = await leadsService.updateStage(leadId, newStage);
+            if (result.success) {
+                setLeads(leads.map(l => l.id === leadId ? { ...l, stage: newStage, lastContact: new Date().toISOString().split('T')[0] } : l));
+                showToast(language === 'he' ? 'שלב עודכן' : 'Stage updated');
+            } else {
+                throw new Error(result.error?.message || 'Failed to update stage');
+            }
+        } catch (err) {
+            console.error('[Leads] Stage update error:', err);
+            showToast(err.message || err.error?.message || 'Failed to update stage', 'error');
+        }
     };
 
     // Convert lead to customer
     const handleConvertToCustomer = async () => {
         try {
             setSaving(true);
-            // In production: create customer from lead data
-            // await customersService.create({ name: selectedLead.name, email: selectedLead.email, ... });
-            setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, stage: 'WON' } : l));
-            setShowConvertModal(false);
-            showToast(language === 'he' ? 'ליד הומר ללקוח!' : 'Lead converted to customer!');
+            // Try to use convert endpoint, fallback to creating customer manually
+            try {
+                const result = await leadsService.convert(selectedLead.id);
+                if (result.success) {
+                    setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, stage: 'WON' } : l));
+                    setShowConvertModal(false);
+                    showToast(language === 'he' ? 'ליד הומר ללקוח!' : 'Lead converted to customer!');
+                    return;
+                }
+            } catch (convertError) {
+                console.log('[Leads] Convert endpoint not available, creating customer manually');
+            }
+
+            // Fallback: create customer from lead data
+            const customerData = {
+                name: selectedLead.name,
+                email: selectedLead.email,
+                phone: selectedLead.phone,
+                company: selectedLead.company,
+                notes: selectedLead.notes
+            };
+            const customerResult = await customersService.create(customerData);
+            if (customerResult.success) {
+                // Update lead stage to WON
+                await leadsService.updateStage(selectedLead.id, 'WON');
+                setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, stage: 'WON' } : l));
+                setShowConvertModal(false);
+                showToast(language === 'he' ? 'ליד הומר ללקוח!' : 'Lead converted to customer!');
+            } else {
+                throw new Error(customerResult.error?.message || 'Failed to create customer');
+            }
         } catch (err) {
-            showToast(err.message || 'Failed to convert', 'error');
+            console.error('[Leads] Convert error:', err);
+            showToast(err.message || err.error?.message || 'Failed to convert', 'error');
         } finally {
             setSaving(false);
         }

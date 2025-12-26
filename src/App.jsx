@@ -22,7 +22,8 @@ import {
   Moon,
   Sun,
   Upload,
-  Target
+  Target,
+  FolderOpen
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -43,6 +44,7 @@ import SettingsPage from './pages/SettingsPage';
 import LoginPage from './pages/LoginPage';
 import ImportPage from './pages/ImportPage';
 import Leads from './pages/Leads';
+import AssetLibrary from './pages/AssetLibrary';
 import './App.css';
 
 // Language Context
@@ -69,7 +71,8 @@ const iconMap = {
   UserCog,
   Settings,
   Upload,
-  Target
+  Target,
+  FolderOpen
 };
 
 // Protected Route Component
@@ -337,6 +340,11 @@ function AppContent() {
               <Route path="/import" element={
                 <ProtectedRoute>
                   <ImportPage currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/assets" element={
+                <ProtectedRoute>
+                  <AssetLibrary currentUser={currentUser} t={t} language={language} />
                 </ProtectedRoute>
               } />
             </Routes>

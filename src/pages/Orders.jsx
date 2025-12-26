@@ -62,7 +62,8 @@ function Orders({ currentUser, t, language }) {
     const [newOrderForm, setNewOrderForm] = useState({
         customerId: '',
         items: [{ productId: '', quantity: 1, unitPrice: 0, selectedParameters: [] }],
-        notes: ''
+        notes: '',
+        dueDate: ''
     });
 
     // Fetch data
@@ -73,18 +74,39 @@ function Orders({ currentUser, t, language }) {
     const fetchData = async () => {
         try {
             setLoading(true);
+            setError(null);
+
             const [ordersRes, customersRes, productsRes] = await Promise.all([
                 ordersService.getAll({ limit: 100 }),
                 customersService.getAll({ limit: 100 }),
                 productsService.getAll({ limit: 100 })
             ]);
 
-            if (ordersRes.success) setOrders(ordersRes.data.orders || []);
-            if (customersRes.success) setCustomers(customersRes.data.customers || []);
-            if (productsRes.success) setProducts(productsRes.data.products || []);
+            console.log('[Orders] API Responses:', { ordersRes, customersRes, productsRes });
+
+            // Handle Orders
+            if (ordersRes.success) {
+                const ordersData = ordersRes.data?.orders || ordersRes.data?.items || (Array.isArray(ordersRes.data) ? ordersRes.data : []);
+                setOrders(ordersData);
+            } else {
+                console.warn('[Orders] Orders API failed:', ordersRes.error);
+            }
+
+            // Handle Customers
+            if (customersRes.success) {
+                const customersData = customersRes.data?.customers || customersRes.data?.items || (Array.isArray(customersRes.data) ? customersRes.data : []);
+                setCustomers(customersData);
+            }
+
+            // Handle Products
+            if (productsRes.success) {
+                const productsData = productsRes.data?.products || productsRes.data?.items || (Array.isArray(productsRes.data) ? productsRes.data : []);
+                setProducts(productsData);
+            }
 
         } catch (err) {
-            setError(err.error?.message || 'Failed to load data');
+            console.error('[Orders] Fetch error:', err);
+            setError(err.message || 'Failed to load data');
         } finally {
             setLoading(false);
         }
@@ -180,14 +202,15 @@ function Orders({ currentUser, t, language }) {
                     unitPrice: item.unitPrice,
                     selectedParameters: item.selectedParameters || []
                 })),
-                notes: newOrderForm.notes
+                notes: newOrderForm.notes,
+                dueDate: newOrderForm.dueDate
             };
 
             const result = await ordersService.create(orderData);
             if (result.success) {
                 setOrders([result.data, ...orders]);
                 setShowAddModal(false);
-                setNewOrderForm({ customerId: '', items: [{ productId: '', quantity: 1, unitPrice: 0, selectedParameters: [] }], notes: '' });
+                setNewOrderForm({ customerId: '', items: [{ productId: '', quantity: 1, unitPrice: 0, selectedParameters: [] }], notes: '', dueDate: '' });
                 showToast(t?.('orderCreated') || 'Order created successfully!');
             } else {
                 showToast(result.error?.message || 'Failed to create order', 'error');
@@ -704,7 +727,7 @@ function Orders({ currentUser, t, language }) {
                                                 newItems[idx] = {
                                                     ...newItems[idx],
                                                     productId: e.target.value,
-                                                    unitPrice: product?.price || 0,
+                                                    unitPrice: product?.basePrice || product?.price || 0,
                                                     selectedParameters: []
                                                 };
                                                 setNewOrderForm({ ...newOrderForm, items: newItems });
@@ -712,7 +735,7 @@ function Orders({ currentUser, t, language }) {
                                         >
                                             <option value="">{language === 'he' ? 'בחר מוצר...' : 'Select product...'}</option>
                                             {products.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name} - ${(p.price || 0).toLocaleString()}</option>
+                                                <option key={p.id} value={p.id}>{p.name} - ${(p.basePrice || p.price || 0).toLocaleString()}</option>
                                             ))}
                                         </select>
                                         <input
@@ -753,15 +776,27 @@ function Orders({ currentUser, t, language }) {
                         </button>
                     </div>
 
-                    {/* Step 3: Notes */}
+                    {/* Step 3: Details */}
                     <div className="wizard-section">
-                        <h4><FileText size={18} /> {t?.('notes') || 'Notes'}</h4>
-                        <textarea
-                            className="form-textarea"
-                            value={newOrderForm.notes}
-                            onChange={(e) => setNewOrderForm({ ...newOrderForm, notes: e.target.value })}
-                            placeholder={language === 'he' ? 'הערות להזמנה...' : 'Order notes...'}
-                        />
+                        <h4><Clock size={18} /> {t?.('details') || 'Details'}</h4>
+                        <div className="form-group">
+                            <label>{language === 'he' ? 'תאריך יעד' : 'Due Date'}</label>
+                            <input
+                                type="date"
+                                className="form-input"
+                                value={newOrderForm.dueDate}
+                                onChange={(e) => setNewOrderForm({ ...newOrderForm, dueDate: e.target.value })}
+                            />
+                        </div>
+                        <div className="form-group">
+                            <label>{t?.('notes') || 'Notes'}</label>
+                            <textarea
+                                className="form-textarea"
+                                value={newOrderForm.notes}
+                                onChange={(e) => setNewOrderForm({ ...newOrderForm, notes: e.target.value })}
+                                placeholder={language === 'he' ? 'הערות להזמנה...' : 'Order notes...'}
+                            />
+                        </div>
                     </div>
 
                     {/* Summary */}

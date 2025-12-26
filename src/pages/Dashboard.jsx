@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useState, useEffect } from 'react';
 import {
     TrendingUp,
@@ -11,21 +12,28 @@ import {
     CheckCircle2,
     AlertCircle,
     Loader2,
-    AlertTriangle
+    AlertTriangle,
+    Bell,
+    FileText
 } from 'lucide-react';
 import { analyticsService, tasksService } from '../services/api';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './Dashboard.css';
 
 function Dashboard({ currentUser, t, language }) {
+    // 1. קריאת המשתמש הנוכחי מ-localStorage
+    const localUser = localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null;
+    const user = localUser || currentUser;
+
     const [dashboardData, setDashboardData] = useState(null);
     const [revenueTrends, setRevenueTrends] = useState([]);
     const [taskAnalytics, setTaskAnalytics] = useState(null);
     const [myTasks, setMyTasks] = useState([]);
+    const [pendingTasks, setPendingTasks] = useState([]); // For Admin
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    const isEmployee = currentUser?.role === 'EMPLOYEE';
+    const isEmployee = user?.role === 'EMPLOYEE';
 
     // Fetch data
     useEffect(() => {
@@ -37,24 +45,27 @@ function Dashboard({ currentUser, t, language }) {
             setLoading(true);
 
             if (isEmployee) {
-                // For employees - fetch their tasks
+                // For employees - fetch their tasks and derive orders
                 const tasksRes = await tasksService.getMy();
                 if (tasksRes.success) {
                     setMyTasks(tasksRes.data.tasks || []);
                 }
             } else {
-                // For admin/manager - fetch analytics
-                const [dashRes, trendsRes, tasksAnalyticsRes] = await Promise.all([
+                // For admin/manager - fetch analytics and pending tasks
+                const [dashRes, trendsRes, tasksAnalyticsRes, pendingRes] = await Promise.all([
                     analyticsService.getDashboard(),
                     analyticsService.getRevenueTrends('monthly', new Date().getFullYear()),
-                    analyticsService.getTasks()
+                    analyticsService.getTasks(),
+                    tasksService.getAll({ status: 'PENDING', limit: 5 })
                 ]);
 
                 if (dashRes.success) setDashboardData(dashRes.data);
                 if (trendsRes.success) setRevenueTrends(trendsRes.data.trends || []);
                 if (tasksAnalyticsRes.success) setTaskAnalytics(tasksAnalyticsRes.data);
+                if (pendingRes.success) setPendingTasks(pendingRes.data.tasks || []);
             }
         } catch (err) {
+            console.error(err);
             setError(err.error?.message || 'Failed to load dashboard');
         } finally {
             setLoading(false);
@@ -76,6 +87,18 @@ function Dashboard({ currentUser, t, language }) {
     };
 
     const getStatusLabel = (status) => taskStatusLabels[language]?.[status] || taskStatusLabels.he[status];
+
+    // Derive orders from tasks for Employee
+    const myOrders = isEmployee ? myTasks
+        .map(t => t.orderItem?.order)
+        .filter(o => o && o.id)
+        .filter((o, i, self) => i === self.findIndex(item => item.id === o.id)) : [];
+
+    // Mock notifications for Employee
+    const notifications = [
+        { id: 1, text: language === 'he' ? 'נוספה משימה חדשה להזמנה #1234' : 'New task added for Order #1234', time: '10:00' },
+        { id: 2, text: language === 'he' ? 'תזכורת: פגישת צוות ב-14:00' : 'Reminder: Team meeting at 14:00', time: '09:30' }
+    ];
 
     // Loading state
     if (loading) {
@@ -115,12 +138,20 @@ function Dashboard({ currentUser, t, language }) {
             gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
         },
         {
-            title: language === 'he' ? 'משימות פתוחות' : 'Open Tasks',
-            value: myTasks.filter(t => t.status !== 'COMPLETED').length,
+            title: language === 'he' ? 'הזמנות שלי' : 'My Orders',
+            value: myOrders.length,
             change: '',
             trend: 'neutral',
-            icon: AlertCircle,
+            icon: ShoppingCart,
             gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+        },
+        {
+            title: language === 'he' ? 'התראות' : 'Notifications',
+            value: notifications.length,
+            change: '',
+            trend: 'neutral',
+            icon: Bell,
+            gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
         }
     ];
 
@@ -176,13 +207,16 @@ function Dashboard({ currentUser, t, language }) {
 
     return (
         <div className="dashboard">
-            {/* Welcome Message for Employee */}
-            {isEmployee && (
-                <div className="welcome-card glass-card">
-                    <h2>{language === 'he' ? 'שלום' : 'Hello'} {currentUser?.firstName}! </h2>
-                    <p>{language === 'he' ? 'הנה הסיכום של המשימות שלך היום' : 'Here is your task summary for today'}</p>
-                </div>
-            )}
+            {/* 3. Welcome Message with User Name */}
+            <div className="welcome-card glass-card">
+                <h2>{language === 'he' ? 'שלום' : 'Hello'}, {user?.firstName || user?.name || 'User'}!</h2>
+                <p>
+                    {isEmployee
+                        ? (language === 'he' ? 'הנה עדכון על המשימות וההזמנות שלך' : 'Here is an update on your tasks and orders')
+                        : (language === 'he' ? 'הנה סקירה כללית של העסק היום' : 'Here is a general overview of the business today')
+                    }
+                </p>
+            </div>
 
             {/* Stats Grid */}
             <div className="stats-grid">
@@ -210,7 +244,9 @@ function Dashboard({ currentUser, t, language }) {
                 })}
             </div>
 
-            {/* Charts Section - Only for ADMIN/MANAGER */}
+            {/* Charts & Lists Section - Layout varies by role */}
+
+            {/* ADMIN / MANAGER VIEW */}
             {!isEmployee && (
                 <div className="charts-grid">
                     {/* Revenue Chart */}
@@ -247,71 +283,28 @@ function Dashboard({ currentUser, t, language }) {
                         </div>
                     </div>
 
-                    {/* Tasks by Status */}
+                    {/* Tasks by Status Chart */}
                     <div className="chart-card glass-card">
                         <div className="card-header">
                             <h3>{language === 'he' ? 'משימות לפי סטטוס' : 'Tasks by Status'}</h3>
-                            <span className="card-subtitle">{language === 'he' ? 'התפלגות נוכחית' : 'Current distribution'}</span>
                         </div>
                         <div className="chart-container">
                             {taskPieData.length > 0 ? (
-                                <>
-                                    <ResponsiveContainer width="100%" height={300}>
-                                        <PieChart>
-                                            <Pie
-                                                data={taskPieData}
-                                                cx="50%"
-                                                cy="50%"
-                                                innerRadius={60}
-                                                outerRadius={100}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                            >
-                                                {taskPieData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip
-                                                contentStyle={{
-                                                    background: 'rgba(26, 26, 46, 0.95)',
-                                                    border: '1px solid rgba(255,255,255,0.1)',
-                                                    borderRadius: '12px',
-                                                    color: '#fff'
-                                                }}
-                                            />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                    <div className="pie-legend">
-                                        {taskPieData.map((item, index) => (
-                                            <div key={index} className="legend-item">
-                                                <div className="legend-color" style={{ background: item.color }}></div>
-                                                <span>{item.name}: {item.value}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="empty-chart">
-                                    <Package size={48} />
-                                    <p>{language === 'he' ? 'אין נתונים' : 'No data'}</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Tasks by Department */}
-                    <div className="chart-card glass-card full-width">
-                        <div className="card-header">
-                            <h3>{language === 'he' ? 'משימות לפי מחלקה' : 'Tasks by Department'}</h3>
-                            <span className="card-subtitle">{language === 'he' ? 'עומס עבודה' : 'Workload'}</span>
-                        </div>
-                        <div className="chart-container">
-                            {tasksByDeptData.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={tasksByDeptData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-                                        <XAxis dataKey="departmentName" stroke="#8888a0" />
-                                        <YAxis stroke="#8888a0" />
+                                    <PieChart>
+                                        <Pie
+                                            data={taskPieData}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={100}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            {taskPieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
                                         <Tooltip
                                             contentStyle={{
                                                 background: 'rgba(26, 26, 46, 0.95)',
@@ -319,10 +312,8 @@ function Dashboard({ currentUser, t, language }) {
                                                 borderRadius: '12px',
                                                 color: '#fff'
                                             }}
-                                            formatter={(value) => [value, language === 'he' ? 'משימות' : 'Tasks']}
                                         />
-                                        <Bar dataKey="taskCount" radius={[8, 8, 0, 0]} fill="#667eea" />
-                                    </BarChart>
+                                    </PieChart>
                                 </ResponsiveContainer>
                             ) : (
                                 <div className="empty-chart">
@@ -332,45 +323,112 @@ function Dashboard({ currentUser, t, language }) {
                             )}
                         </div>
                     </div>
-                </div>
-            )}
 
-            {/* My Tasks Section - For Employee */}
-            {isEmployee && myTasks.length > 0 && (
-                <div className="my-tasks-section glass-card">
-                    <div className="card-header">
-                        <h3>{language === 'he' ? 'המשימות שלי' : 'My Tasks'}</h3>
-                    </div>
-                    <div className="tasks-list">
-                        {myTasks.map(task => (
-                            <div key={task.id} className="task-item">
-                                <div
-                                    className="task-status-dot"
-                                    style={{ background: taskStatusColors[task.status] }}
-                                ></div>
-                                <div className="task-content">
-                                    <h4>{task.workflowStep?.name || '-'}</h4>
-                                    <p>{task.orderItem?.product?.name || '-'} - {task.orderItem?.order?.orderNumber || '-'}</p>
-                                    <span className="task-customer">{task.orderItem?.order?.customer?.name || '-'}</span>
+                    {/* Pending Tasks List (Admin) */}
+                    <div className="glass-card" style={{ gridColumn: 'span 2' }}>
+                        <div className="card-header">
+                            <h3>{language === 'he' ? 'משימות ממתינות (כל המחלקות)' : 'Pending Tasks (All Departments)'}</h3>
+                        </div>
+                        <div className="tasks-list">
+                            {pendingTasks.length > 0 ? pendingTasks.map(task => (
+                                <div key={task.id} className="task-item">
+                                    <div className="task-status-dot" style={{ background: taskStatusColors[task.status] }}></div>
+                                    <div className="task-content">
+                                        <h4>{task.title || (task.workflowStep?.name + ' - ' + task.orderItem?.product?.name)}</h4>
+                                        <span className="task-customer">
+                                            {task.department?.name || 'General'} | {task.assignee ? (task.assignee.firstName + ' ' + task.assignee.lastName) : 'Unassigned'}
+                                        </span>
+                                    </div>
+                                    <div className="task-badge" style={{
+                                        background: `${taskStatusColors[task.status]}20`,
+                                        color: taskStatusColors[task.status]
+                                    }}>
+                                        {getStatusLabel(task.status)}
+                                    </div>
                                 </div>
-                                <div className="task-badge" style={{
-                                    background: `${taskStatusColors[task.status]}20`,
-                                    color: taskStatusColors[task.status]
-                                }}>
-                                    {getStatusLabel(task.status)}
-                                </div>
-                            </div>
-                        ))}
+                            )) : (
+                                <p className="p-4">{language === 'he' ? 'אין משימות ממתינות' : 'No pending tasks'}</p>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
 
-            {/* Empty state for employee with no tasks */}
-            {isEmployee && myTasks.length === 0 && (
-                <div className="empty-tasks glass-card">
-                    <CheckCircle2 size={48} />
-                    <h3>{language === 'he' ? 'אין לך משימות פתוחות' : 'No open tasks'}</h3>
-                    <p>{language === 'he' ? 'כל הכבוד! סיימת את כל המשימות' : 'Great job! All tasks completed'}</p>
+            {/* EMPLOYEE VIEW */}
+            {isEmployee && (
+                <div className="charts-grid">
+                    {/* My Tasks */}
+                    <div className="glass-card full-width">
+                        <div className="card-header">
+                            <h3>{language === 'he' ? 'המשימות שלי' : 'My Tasks'}</h3>
+                        </div>
+                        <div className="tasks-list">
+                            {myTasks.length > 0 ? myTasks.map(task => (
+                                <div key={task.id} className="task-item">
+                                    <div
+                                        className="task-status-dot"
+                                        style={{ background: taskStatusColors[task.status] }}
+                                    ></div>
+                                    <div className="task-content">
+                                        <h4>{task.workflowStep?.name || '-'}</h4>
+                                        <p>{task.orderItem?.product?.name || '-'} - {task.orderItem?.order?.orderNumber || '-'}</p>
+                                        <span className="task-customer">{task.orderItem?.order?.customer?.name || '-'}</span>
+                                    </div>
+                                    <div className="task-badge" style={{
+                                        background: `${taskStatusColors[task.status]}20`,
+                                        color: taskStatusColors[task.status]
+                                    }}>
+                                        {getStatusLabel(task.status)}
+                                    </div>
+                                </div>
+                            )) : (
+                                <div className="empty-tasks">
+                                    <CheckCircle2 size={40} />
+                                    <p>{language === 'he' ? 'אין משימות פתוחות' : 'No open tasks'}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* My Orders */}
+                    <div className="glass-card">
+                        <div className="card-header">
+                            <h3>{language === 'he' ? 'הזמנות בטיפולי' : 'My Orders'}</h3>
+                        </div>
+                        <div className="orders-list" style={{ marginTop: '1rem' }}>
+                            {myOrders.length > 0 ? myOrders.map(order => (
+                                <div key={order.id} className="order-item-compact" style={{ padding: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div className="icon-box" style={{ background: '#f093fb20', padding: '8px', borderRadius: '8px', color: '#f093fb' }}>
+                                        <FileText size={18} />
+                                    </div>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: '0.95rem' }}>#{order.orderNumber}</h4>
+                                        <p style={{ margin: 0, fontSize: '0.8rem', opacity: 0.7 }}>{order.customer?.name}</p>
+                                    </div>
+                                </div>
+                            )) : (
+                                <p className="p-4" style={{ opacity: 0.6 }}>{language === 'he' ? 'אין הזמנות מקושרות' : 'No linked orders'}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Notifications */}
+                    <div className="glass-card">
+                        <div className="card-header">
+                            <h3>{language === 'he' ? 'התראות' : 'Notifications'}</h3>
+                        </div>
+                        <div className="notifications-list" style={{ marginTop: '1rem' }}>
+                            {notifications.map(notif => (
+                                <div key={notif.id} className="notification-item" style={{ padding: '0.8rem', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '10px' }}>
+                                    <div style={{ color: '#4facfe', marginTop: '2px' }}><Bell size={16} /></div>
+                                    <div>
+                                        <p style={{ margin: 0, fontSize: '0.9rem' }}>{notif.text}</p>
+                                        <span style={{ fontSize: '0.75rem', opacity: 0.5 }}>{notif.time}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

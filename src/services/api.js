@@ -32,7 +32,13 @@ api.interceptors.request.use(
 
 // Response interceptor - handle errors
 api.interceptors.response.use(
-    (response) => response.data,
+    (response) => {
+        // Return only the data portion if it exists in the standard wrapper
+        if (response.data && response.data.success !== undefined) {
+            return response.data;
+        }
+        return response.data;
+    },
     (error) => {
         const { response } = error;
 
@@ -40,7 +46,10 @@ api.interceptors.response.use(
         if (response?.status === 401) {
             localStorage.removeItem('authToken');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            // Only redirect if not already on login page
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
         }
 
         // Return error in consistent format
@@ -58,19 +67,16 @@ api.interceptors.response.use(
 export const authService = {
     login: async (email, password) => {
         const result = await api.post('/auth/login', { email, password });
-        console.log('[Auth Login] Result:', result);
-        console.log('[Auth Login] Token:', result?.data?.token ? 'Present' : 'Missing');
-        if (result.success) {
+        if (result.success && result.data) {
             localStorage.setItem('authToken', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
-            console.log('[Auth Login] Token saved to localStorage');
         }
         return result;
     },
 
     register: async (userData) => {
         const result = await api.post('/auth/register', userData);
-        if (result.success) {
+        if (result.success && result.data) {
             localStorage.setItem('authToken', result.data.token);
             localStorage.setItem('user', JSON.stringify(result.data.user));
         }
@@ -93,19 +99,6 @@ export const authService = {
 
     isAuthenticated: () => {
         return !!localStorage.getItem('authToken');
-    },
-
-    getGoogleAuthUrl: async () => {
-        return api.get('/auth/google');
-    },
-
-    googleCallback: async (code) => {
-        const result = await api.get(`/auth/google/callback?code=${code}`);
-        if (result.success) {
-            localStorage.setItem('authToken', result.data.token);
-            localStorage.setItem('user', JSON.stringify(result.data.user));
-        }
-        return result;
     }
 };
 
@@ -133,6 +126,42 @@ export const customersService = {
 
     delete: async (id) => {
         return api.delete(`/customers/${id}`);
+    }
+};
+
+// ============ LEADS ============
+export const leadsService = {
+    getAll: async (params = {}) => {
+        const { page = 1, limit = 100, stage, source, search } = params;
+        const queryParams = new URLSearchParams({ page, limit });
+        if (stage) queryParams.append('stage', stage);
+        if (source) queryParams.append('source', source);
+        if (search) queryParams.append('search', search);
+        return api.get(`/leads?${queryParams}`);
+    },
+
+    getById: async (id) => {
+        return api.get(`/leads/${id}`);
+    },
+
+    create: async (data) => {
+        return api.post('/leads', data);
+    },
+
+    update: async (id, data) => {
+        return api.put(`/leads/${id}`, data);
+    },
+
+    delete: async (id) => {
+        return api.delete(`/leads/${id}`);
+    },
+
+    updateStage: async (id, stage) => {
+        return api.put(`/leads/${id}`, { stage });
+    },
+
+    convert: async (id) => {
+        return api.post(`/leads/${id}/convert`);
     }
 };
 
@@ -252,32 +281,6 @@ export const workflowsService = {
 
     delete: async (id) => {
         return api.delete(`/workflows/${id}`);
-    },
-
-    // Steps
-    addStep: async (workflowId, data) => {
-        return api.post(`/workflows/${workflowId}/steps`, data);
-    },
-
-    updateStep: async (stepId, data) => {
-        return api.put(`/workflows/steps/${stepId}`, data);
-    },
-
-    deleteStep: async (stepId) => {
-        return api.delete(`/workflows/steps/${stepId}`);
-    },
-
-    reorderSteps: async (workflowId, stepIds) => {
-        return api.put(`/workflows/${workflowId}/reorder`, { stepIds });
-    },
-
-    // Product linking
-    linkProduct: async (productId, workflowId) => {
-        return api.post('/workflows/link-product', { productId, workflowId });
-    },
-
-    unlinkProduct: async (productId) => {
-        return api.delete(`/workflows/unlink-product/${productId}`);
     }
 };
 
@@ -310,28 +313,6 @@ export const parametersService = {
 
     delete: async (id) => {
         return api.delete(`/parameters/${id}`);
-    },
-
-    // Options
-    addOption: async (parameterId, data) => {
-        return api.post(`/parameters/${parameterId}/options`, data);
-    },
-
-    updateOption: async (parameterId, optionId, data) => {
-        return api.put(`/parameters/${parameterId}/options/${optionId}`, data);
-    },
-
-    deleteOption: async (parameterId, optionId) => {
-        return api.delete(`/parameters/${parameterId}/options/${optionId}`);
-    },
-
-    // Product assignment
-    assign: async (productId, parameterId, sortOrder = 1) => {
-        return api.post('/parameters/assign', { productId, parameterId, sortOrder });
-    },
-
-    unassign: async (productId, parameterId) => {
-        return api.delete(`/parameters/unassign/${productId}/${parameterId}`);
     },
 
     calculatePrice: async (productId, selectedParameters) => {

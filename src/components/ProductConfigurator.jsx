@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Palette, DollarSign, Info } from 'lucide-react';
-import { parametersService } from '../services/api';
+import { parametersService, productsService } from '../services/api';
 import './ProductConfigurator.css';
 
 /**
@@ -23,12 +23,25 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
     const fetchParameters = async () => {
         try {
             setLoading(true);
-            const response = await parametersService.getAll({ productId: product.id });
-            if (response.success && product.parameterAssignments) {
+            // Use productsService to get parameters for this specific product
+            const response = await productsService.getParameters(product.id);
+
+            if (response.success) {
+                // Handle different data structures (Mock vs Real API)
+                // Real API typically returns assignments: [{ parameter: { ... } }]
+                // Mock might return direct parameters: [{ ... }]
+                const rawParams = response.data.parameters || response.data || [];
+                setParameters(rawParams);
+            } else if (product.parameterAssignments) {
+                // Fallback to product embedded parameters if available
                 setParameters(product.parameterAssignments);
             }
         } catch (err) {
             console.error('Failed to fetch parameters:', err);
+            // Fallback
+            if (product.parameterAssignments) {
+                setParameters(product.parameterAssignments);
+            }
         } finally {
             setLoading(false);
         }
@@ -89,7 +102,7 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
 
             <div className="parameters-form">
                 {parameters.map((assignment) => {
-                    const param = assignment.parameter;
+                    const param = assignment.parameter || assignment;
                     const isRequired = param.isRequired;
 
                     return (
