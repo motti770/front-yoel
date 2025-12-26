@@ -23,7 +23,6 @@ import {
   Sun,
   Upload,
   Target,
-  Target,
   FolderOpen,
   ChevronDown,
   User,
