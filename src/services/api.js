@@ -105,6 +105,10 @@ export const authService = {
 // ============ CUSTOMERS ============
 export const customersService = {
     getAll: async (params = {}) => {
+        if (USE_MOCK) {
+            console.log('[MOCK] Getting customers');
+            return { success: true, data: { customers: mockCustomers, total: mockCustomers.length } };
+        }
         const { page = 1, limit = 100, status, search } = params;
         const queryParams = new URLSearchParams({ page, limit });
         if (status) queryParams.append('status', status);
