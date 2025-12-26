@@ -1,14 +1,18 @@
 import { useState } from 'react';
+import { useTheme } from '../contexts/ThemeContext';
 import {
     User,
     Bell,
     Palette,
     Shield,
-    Save
+    Save,
+    Check
 } from 'lucide-react';
 import './SettingsPage.css';
 
 function SettingsPage({ currentUser }) {
+    const { theme, setTheme, primaryColor, setPrimaryColor } = useTheme();
+
     const [profile, setProfile] = useState({
         firstName: currentUser.firstName,
         lastName: currentUser.lastName,
@@ -22,7 +26,6 @@ function SettingsPage({ currentUser }) {
         sms: false
     });
 
-    const [theme, setTheme] = useState('dark');
 
     return (
         <div className="settings-page">
@@ -173,9 +176,12 @@ function SettingsPage({ currentUser }) {
                                 ].map(color => (
                                     <button
                                         key={color.name}
-                                        className="color-option"
+                                        className={`color-option ${primaryColor === color.name ? 'active' : ''}`}
                                         style={{ background: color.gradient }}
-                                    ></button>
+                                        onClick={() => setPrimaryColor(color.name)}
+                                    >
+                                        {(primaryColor === color.name || (!primaryColor && color.name === 'purple')) && <Check size={16} color="white" />}
+                                    </button>
                                 ))}
                             </div>
                         </div>
