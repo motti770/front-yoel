@@ -56,6 +56,25 @@ function CalendarPage({ currentUser }) {
 
     const getEventsForDay = (day) => events.filter(event => event.date === day);
 
+    // Modal state
+    const [selectedDateEvents, setSelectedDateEvents] = useState(null);
+    const [showDayModal, setShowDayModal] = useState(false);
+    const [selectedEvent, setSelectedEvent] = useState(null);
+    const [showEventModal, setShowEventModal] = useState(false);
+
+    // Click handlers
+    const handleDayClick = (day) => {
+        const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+        const dayEvents = getEventsForDay(day);
+        setSelectedDateEvents({ date, events: dayEvents });
+        setShowDayModal(true);
+    };
+
+    const handleEventClick = (event) => {
+        setSelectedEvent(event);
+        setShowEventModal(true);
+    };
+
     const renderCalendarDays = () => {
         const daysInMonth = getDaysInMonth(currentDate);
         const firstDay = getFirstDayOfMonth(currentDate);
@@ -73,6 +92,8 @@ function CalendarPage({ currentUser }) {
                 <div
                     key={day}
                     className={`calendar-day ${isToday(day) ? 'today' : ''} ${hasEvent(day) ? 'has-event' : ''}`}
+                    onClick={() => handleDayClick(day)}
+                    style={{ cursor: 'pointer' }}
                 >
                     <span className="day-number">{day}</span>
                     {dayEvents.length > 0 && (
@@ -111,7 +132,10 @@ function CalendarPage({ currentUser }) {
                     <h2>לוח שנה</h2>
                     <p>{months[currentDate.getMonth()]} {currentDate.getFullYear()}</p>
                 </div>
-                <button className="btn btn-primary">
+                <button className="btn btn-primary" onClick={() => {
+                    setSelectedDateEvents({ date: new Date(), events: [] });
+                    setShowDayModal(true);
+                }}>
                     <Plus size={18} />
                     אירוע חדש
                 </button>
@@ -144,7 +168,7 @@ function CalendarPage({ currentUser }) {
                     {events.map(event => {
                         const Icon = eventTypeIcons[event.type];
                         return (
-                            <div key={event.id} className="event-item">
+                            <div key={event.id} className="event-item" onClick={() => handleEventClick(event)} style={{ cursor: 'pointer' }}>
                                 <div className={`event-icon ${event.type}`}>
                                     <Icon size={18} />
                                 </div>
@@ -163,6 +187,90 @@ function CalendarPage({ currentUser }) {
                     })}
                 </div>
             </div>
+
+            {/* Day Details Modal */}
+            {showDayModal && selectedDateEvents && (
+                <div className="modal-overlay" onClick={() => setShowDayModal(false)}>
+                    <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>{selectedDateEvents.date.getDate()} ב{months[selectedDateEvents.date.getMonth()]}</h3>
+                            <button className="close-btn" onClick={() => setShowDayModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            {selectedDateEvents.events.length > 0 ? (
+                                <div className="day-events-list">
+                                    {selectedDateEvents.events.map(event => (
+                                        <div key={event.id} className="event-item-card" onClick={() => {
+                                            setShowDayModal(false);
+                                            handleEventClick(event);
+                                        }}>
+                                            <div className={`status-line ${event.type}`}></div>
+                                            <div className="event-info">
+                                                <h4>{event.title}</h4>
+                                                <div className="event-time-row">
+                                                    <Clock size={14} />
+                                                    <span>{event.time}</span>
+                                                    <span className="badge">{eventTypeLabels[event.type]}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="empty-state">
+                                    <p>אין אירועים ליום זה</p>
+                                </div>
+                            )}
+
+                            <div className="add-event-form">
+                                <h4>הוסף אירוע מהיר</h4>
+                                <input type="text" placeholder="כותרת האירוע..." className="form-input" />
+                                <div className="form-row">
+                                    <input type="time" className="form-input" />
+                                    <select className="form-input">
+                                        <option value="meeting">פגישה</option>
+                                        <option value="call">שיחה</option>
+                                        <option value="task">משימה</option>
+                                    </select>
+                                </div>
+                                <button className="btn btn-primary full-width">הוסף אירוע</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Event Details Modal */}
+            {showEventModal && selectedEvent && (
+                <div className="modal-overlay" onClick={() => setShowEventModal(false)}>
+                    <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3>פרטי אירוע</h3>
+                            <button className="close-btn" onClick={() => setShowEventModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="event-detail-view">
+                                <div className={`event-badge-large ${selectedEvent.type}`}>
+                                    {eventTypeLabels[selectedEvent.type]}
+                                </div>
+                                <h2>{selectedEvent.title}</h2>
+                                <div className="detail-row">
+                                    <Clock size={18} />
+                                    <span>{selectedEvent.time}, {selectedEvent.date} ב{months[currentDate.getMonth()]}</span>
+                                </div>
+                                <div className="detail-row">
+                                    <CheckSquare size={18} />
+                                    <span>סטטוס: פעיל</span>
+                                </div>
+                                <div className="detail-actions">
+                                    <button className="btn btn-outline">עריכה</button>
+                                    <button className="btn btn-danger">מחיקה</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
