@@ -156,40 +156,40 @@ function Dashboard({ currentUser, t, language }) {
     ];
 
     // Stats for admin/manager
-    const adminStats = dashboardData ? [
+    const adminStats = [
         {
             title: language === 'he' ? 'סה"כ הכנסות' : 'Total Revenue',
-            value: `$${((dashboardData.totalRevenue || 0) / 1000).toFixed(0)}K`,
-            change: '+12.5%',
-            trend: 'up',
+            value: dashboardData?.totalRevenue ? `$${(dashboardData.totalRevenue / 1000).toFixed(0)}K` : '$0',
+            change: dashboardData?.revenueChange || '0%',
+            trend: (parseFloat(dashboardData?.revenueChange) || 0) >= 0 ? 'up' : 'down',
             icon: TrendingUp,
             gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
         },
         {
             title: language === 'he' ? 'הזמנות' : 'Orders',
-            value: dashboardData.totalOrders || 0,
-            change: '+3',
+            value: dashboardData?.totalOrders || 0,
+            change: dashboardData?.ordersChange || '0',
             trend: 'up',
             icon: ShoppingCart,
             gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
         },
         {
             title: language === 'he' ? 'לקוחות' : 'Customers',
-            value: dashboardData.totalCustomers || 0,
-            change: '+1',
+            value: dashboardData?.totalCustomers || 0,
+            change: dashboardData?.customersChange || '0',
             trend: 'up',
             icon: Users,
             gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
         },
         {
             title: language === 'he' ? 'משימות פעילות' : 'Active Tasks',
-            value: dashboardData.activeTasks || 0,
+            value: dashboardData?.activeTasks || 0,
             change: '',
             trend: 'neutral',
             icon: Package,
             gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
         }
-    ] : [];
+    ];
 
     const stats = isEmployee ? employeeStats : adminStats;
 
