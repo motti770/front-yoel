@@ -370,6 +370,10 @@ export const tasksService = {
         return api.delete(`/tasks/${id}/assign`);
     },
 
+    create: async (taskData) => {
+        return api.post('/tasks', taskData);
+    },
+
     complete: async (id) => {
         return api.post(`/tasks/${id}/complete`);
     },
