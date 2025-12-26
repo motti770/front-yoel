@@ -104,6 +104,7 @@ function AppContent() {
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -247,9 +248,20 @@ function AppContent() {
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
-              <div className="search-box">
+              {/* Mobile Search Toggle */}
+              <button
+                className="icon-button mobile-search-trigger"
+                onClick={() => setShowMobileSearch(!showMobileSearch)}
+              >
+                <Search size={20} />
+              </button>
+
+              <div className={`search-box ${showMobileSearch ? 'show-mobile' : ''}`}>
                 <Search size={18} />
                 <input type="text" placeholder={t('search')} />
+                {showMobileSearch && (
+                  <button className="close-search" onClick={() => setShowMobileSearch(false)}>×</button>
+                )}
               </div>
 
               {/* Notifications */}

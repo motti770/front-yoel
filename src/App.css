@@ -511,6 +511,7 @@
 }
 
 /* Responsive */
+/* Responsive */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -519,10 +520,33 @@
     height: 100vh;
     z-index: 1000;
     transform: translateX(100%);
+    /* Hidden to the right */
+  }
+
+  /* RTL Support for Sidebar */
+  [dir="rtl"] .sidebar {
+    right: 0;
+    left: auto;
+    transform: translateX(100%);
+  }
+
+  [dir="rtl"] .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* LTR Support (just in case) */
+  [dir="ltr"] .sidebar {
+    left: 0;
+    right: auto;
+    transform: translateX(-100%);
+  }
+
+  [dir="ltr"] .sidebar.open {
+    transform: translateX(0);
   }
 
   .sidebar.open {
-    transform: translateX(0);
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
   }
 
   .top-header {
@@ -533,7 +557,67 @@
     display: none;
   }
 
-  .page-content {
-    padding: var(--spacing-lg);
+  .search-box.show-mobile {
+    display: flex;
+    position: absolute;
+    top: 80px;
+    /* Header height */
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: var(--bg-card);
+    padding: 1rem;
+    z-index: 900;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-xl);
+    animation: slideDown 0.2s ease-out;
+  }
+
+  .mobile-search-trigger {
+    display: flex;
+    margin-inline-end: 0.5rem;
+  }
+
+  .close-search {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.5rem;
+    margin-left: 0.5rem;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Global Responsive Tables - MOBILE ONLY */
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+
+  @keyframes slideDown {
+    from {
+      transform: translateY(-10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+/* Desktop Only overrides */
+@media (min-width: 769px) {
+  .mobile-search-trigger {
+    display: none;
   }
 }
