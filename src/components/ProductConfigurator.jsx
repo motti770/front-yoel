@@ -27,25 +27,61 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
             const response = await productsService.getParameters(product.id);
 
             if (response.success) {
-                // Handle different data structures (Mock vs Real API)
-                // Real API typically returns assignments: [{ parameter: { ... } }]
-                // Mock might return direct parameters: [{ ... }]
                 const rawParams = response.data.parameters || response.data || [];
-                setParameters(rawParams);
-            } else if (product.parameterAssignments) {
-                // Fallback to product embedded parameters if available
-                setParameters(product.parameterAssignments);
+                if (rawParams.length > 0) {
+                    setParameters(rawParams);
+                } else {
+                    // Fallback for new products without params - show defaults
+                    setParameters(getDefaultParameters());
+                }
+            } else {
+                setParameters(getDefaultParameters());
             }
         } catch (err) {
             console.error('Failed to fetch parameters:', err);
-            // Fallback
-            if (product.parameterAssignments) {
-                setParameters(product.parameterAssignments);
-            }
+            setParameters(getDefaultParameters());
         } finally {
             setLoading(false);
         }
     };
+
+    // Default parameters if DB is empty
+    const getDefaultParameters = () => [
+        {
+            id: 'param-size',
+            name: language === 'he' ? 'גודל' : 'Size',
+            type: 'SELECT',
+            isRequired: true,
+            description: language === 'he' ? 'בחר את גודל המוצר' : 'Select product size',
+            options: [
+                { id: 'size-s', label: 'Small', priceImpact: 0 },
+                { id: 'size-m', label: 'Medium', priceImpact: 50 },
+                { id: 'size-l', label: 'Large', priceImpact: 100 },
+                { id: 'size-xl', label: 'Extra Large', priceImpact: 150 }
+            ]
+        },
+        {
+            id: 'param-color',
+            name: language === 'he' ? 'צבע בד' : 'Fabric Color',
+            type: 'COLOR',
+            isRequired: true,
+            description: language === 'he' ? 'בחר את צבע הבד העיקרי' : 'Select main fabric color',
+            options: [
+                { id: 'col-navy', label: 'Navy Blue', colorHex: '#000080', priceImpact: 0 },
+                { id: 'col-burgundy', label: 'Burgundy', colorHex: '#800020', priceImpact: 0 },
+                { id: 'col-cream', label: 'Cream', colorHex: '#FFFDD0', priceImpact: 0 },
+                { id: 'col-black', label: 'Black', colorHex: '#000000', priceImpact: 0 },
+                { id: 'col-gold', label: 'Gold', colorHex: '#FFD700', priceImpact: 20 }
+            ]
+        },
+        {
+            id: 'param-text',
+            name: language === 'he' ? 'הקדשה / טקסט' : 'Dedication / Text',
+            type: 'TEXT',
+            isRequired: false,
+            description: language === 'he' ? 'טקסט לרקמה (אופציונלי)' : 'Text for embroidery (optional)'
+        }
+    ];
 
     // Calculate price when selection changes
     useEffect(() => {
@@ -56,23 +92,43 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
 
     const calculatePrice = async () => {
         try {
-            const selectedParameters = Object.entries(selectedParams).map(([parameterId, optionId]) => ({
-                parameterId,
-                optionId
-            }));
+            // Local calculation for immediate feedback (until API is connected)
+            let basePrice = product.price || product.basePrice || 0;
+            let optionsPrice = 0;
+            const breakdown = [];
 
-            const response = await parametersService.calculatePrice(product.id, selectedParameters);
-            if (response.success) {
-                setCalculatedPrice(response.data);
-                // Notify parent component
-                if (onConfigurationChange) {
-                    onConfigurationChange({
-                        selectedParameters,
-                        finalPrice: response.data.finalPrice,
-                        breakdown: response.data.breakdown
-                    });
+            parameters.forEach(param => {
+                const selectedOptionId = selectedParams[param.id];
+                if (selectedOptionId) {
+                    if (param.type === 'SELECT' || param.type === 'COLOR') {
+                        const option = param.options?.find(o => o.id === selectedOptionId);
+                        if (option) {
+                            optionsPrice += (option.priceImpact || 0);
+                            if (option.priceImpact > 0) {
+                                breakdown.push({
+                                    name: `${param.name}: ${option.label}`,
+                                    value: option.priceImpact
+                                });
+                            }
+                        }
+                    }
                 }
+            });
+
+            setCalculatedPrice({
+                finalPrice: basePrice + optionsPrice,
+                breakdown
+            });
+
+            // Notify parent
+            if (onConfigurationChange) {
+                onConfigurationChange({
+                    selectedParameters: Object.entries(selectedParams).map(([k, v]) => ({ parameterId: k, optionId: v })),
+                    finalPrice: basePrice + optionsPrice,
+                    breakdown
+                });
             }
+
         } catch (err) {
             console.error('Failed to calculate price:', err);
         }
@@ -89,9 +145,7 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
         return <div className="configurator-loading">{language === 'he' ? 'טוען...' : 'Loading...'}</div>;
     }
 
-    if (!product || !parameters || parameters.length === 0) {
-        return null;
-    }
+    if (!product) return null;
 
     return (
         <div className="product-configurator">
@@ -101,8 +155,7 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
             </div>
 
             <div className="parameters-form">
-                {parameters.map((assignment) => {
-                    const param = assignment.parameter || assignment;
+                {parameters.map((param) => {
                     const isRequired = param.isRequired;
 
                     return (
@@ -129,10 +182,12 @@ function ProductConfigurator({ product, onConfigurationChange, language = 'he' }
                                             onClick={() => handleParameterChange(param.id, option.id)}
                                             title={option.label}
                                         >
-                                            <div
-                                                className="color-swatch"
-                                                style={{ background: option.colorHex }}
-                                            />
+                                            <div className="color-circle-wrapper">
+                                                <div
+                                                    className="color-swatch-circle"
+                                                    style={{ background: option.colorHex }}
+                                                />
+                                            </div>
                                             <span className="color-label">{option.label}</span>
                                             {option.priceImpact !== 0 && (
                                                 <span className="option-price">
