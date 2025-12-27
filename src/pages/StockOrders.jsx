@@ -1,5 +1,4 @@
-import { useState, useEffect, useContext } from 'react';
-import { LanguageContext } from '../contexts/LanguageContext';
+import { useState, useEffect } from 'react';
 import {
     Warehouse,
     Plus,
@@ -44,8 +43,7 @@ const STATUS_CONFIG = {
     CANCELLED: { label: { he: 'בוטל', en: 'Cancelled' }, color: '#ef4444', icon: XCircle }
 };
 
-function StockOrders() {
-    const { language } = useContext(LanguageContext);
+function StockOrders({ language = 'he' }) {
     const [orders, setOrders] = useState(MOCK_STOCK_ORDERS);
     const [showAddModal, setShowAddModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');

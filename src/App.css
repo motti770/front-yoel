@@ -694,6 +694,22 @@
   max-width: calc(100vw - 32px);
 }
 
+/* Notifications Dropdown Specific */
+.notifications-dropdown {
+  width: 320px !important;
+  max-width: calc(100vw - 40px) !important;
+}
+
+[dir="rtl"] .notifications-dropdown {
+  right: 0 !important;
+  left: auto !important;
+}
+
+[dir="ltr"] .notifications-dropdown {
+  left: auto !important;
+  right: 0 !important;
+}
+
 /* User Profile Dropdown Specifics */
 .profile-dropdown {
   width: 280px;
