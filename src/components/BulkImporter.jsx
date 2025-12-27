@@ -391,7 +391,7 @@ function BulkImporter({
         setImportResults(null);
 
         const dataToImport = getMappedData().filter(r => r._isValid);
-        const results = { success: 0, failed: 0, errors: [] };
+        const results = { success: 0, updated: 0, failed: 0, errors: [] };
 
         try {
             for (let i = 0; i < dataToImport.length; i++) {
@@ -403,13 +403,22 @@ function BulkImporter({
                 delete cleanRow._isValid;
 
                 try {
+                    let result = null;
                     if (onImport) {
-                        await onImport(cleanRow);
+                        result = await onImport(cleanRow);
                     }
-                    results.success++;
+
+                    if (result && result._action === 'updated') {
+                        results.updated++;
+                    } else {
+                        results.success++;
+                    }
                 } catch (err) {
                     results.failed++;
-                    results.errors.push({ row: row._rowIndex, error: err.message });
+                    results.errors.push({
+                        row: row._rowIndex,
+                        error: err.message || (typeof err === 'string' ? err : 'Unknown error occurred')
+                    });
                 }
 
                 setImportProgress(Math.round(((i + 1) / dataToImport.length) * 100));
@@ -743,8 +752,15 @@ function BulkImporter({
                         <div className="result-stat success">
                             <CheckCircle2 size={20} />
                             <span>{importResults.success}</span>
-                            <span>{t.successCount}</span>
+                            <span>{language === 'he' ? 'חדשים' : 'Added'}</span>
                         </div>
+                        {importResults.updated > 0 && (
+                            <div className="result-stat warning" style={{ color: '#f59e0b', background: 'rgba(245, 158, 11, 0.1)' }}>
+                                <RefreshCw size={20} />
+                                <span>{importResults.updated}</span>
+                                <span>{language === 'he' ? 'עודכנו' : 'Updated'}</span>
+                            </div>
+                        )}
                         {importResults.failed > 0 && (
                             <div className="result-stat error">
                                 <XCircle size={20} />

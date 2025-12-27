@@ -135,13 +135,23 @@ function Leads({ currentUser, t, language }) {
     const getLeadsByStage = (stage) => filteredLeads.filter(lead => lead.stage === stage);
 
     // Calculate pipeline metrics
+    // Helper to format currency safely
+    const formatCurrencyMetric = (value) => {
+        if (!value || isNaN(value)) return '0';
+        if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'B';
+        if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M';
+        if (value >= 1000) return (value / 1000).toFixed(1) + 'K';
+        return value.toLocaleString();
+    };
+
+    // Calculate pipeline metrics
     const pipelineMetrics = {
         totalLeads: leads.length,
-        totalValue: leads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0),
-        wonValue: leads.filter(l => l.stage === 'WON').reduce((sum, l) => sum + (l.estimatedValue || 0), 0),
+        totalValue: leads.reduce((sum, lead) => sum + (Number(lead.estimatedValue) || 0), 0),
+        wonValue: leads.filter(l => l.stage === 'WON').reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0),
         conversionRate: leads.length > 0 ? ((leads.filter(l => l.stage === 'WON').length / leads.length) * 100).toFixed(1) : 0,
         proposalsCount: leads.filter(l => l.stage === 'NEGOTIATION').length,
-        proposalsValue: leads.filter(l => l.stage === 'NEGOTIATION').reduce((sum, l) => sum + (l.estimatedValue || 0), 0)
+        proposalsValue: leads.filter(l => l.stage === 'NEGOTIATION').reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0)
     };
 
     // Toast helper
@@ -587,7 +597,7 @@ function Leads({ currentUser, t, language }) {
     };
 
     return (
-        <div className="leads-page">
+        <div className="leads-page" >
             {/* Toast */}
             {toast && (
                 <div className="toast-container">
@@ -596,7 +606,8 @@ function Leads({ currentUser, t, language }) {
                         <span className="toast-message">{toast.message}</span>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Page Header */}
             <div className="page-header-section glass-card">
@@ -617,18 +628,18 @@ function Leads({ currentUser, t, language }) {
                         <span className="metric-label">{language === 'he' ? 'לידים' : 'Leads'}</span>
                     </div>
                     <div className="metric">
-                        <span className="metric-value">₪{(pipelineMetrics.totalValue / 1000).toFixed(0)}K</span>
+                        <span className="metric-value">₪{formatCurrencyMetric(pipelineMetrics.totalValue)}</span>
                         <span className="metric-label">{language === 'he' ? 'פוטנציאל' : 'Pipeline'}</span>
                     </div>
                     <div className="metric">
-                        <span className="metric-value">₪{(pipelineMetrics.proposalsValue / 1000).toFixed(0)}K</span>
+                        <span className="metric-value">₪{formatCurrencyMetric(pipelineMetrics.proposalsValue)}</span>
                         <span className="metric-label">
                             {language === 'he' ? 'הצעות' : 'Proposals'}
                             <span style={{ fontSize: '0.8em', opacity: 0.7, marginInlineStart: '4px' }}>({pipelineMetrics.proposalsCount})</span>
                         </span>
                     </div>
                     <div className="metric won">
-                        <span className="metric-value">₪{(pipelineMetrics.wonValue / 1000).toFixed(0)}K</span>
+                        <span className="metric-value">₪{formatCurrencyMetric(pipelineMetrics.wonValue)}</span>
                         <span className="metric-label">{language === 'he' ? 'זכיות' : 'Won'}</span>
                     </div>
                     <div className="metric">
@@ -1051,14 +1062,14 @@ function Leads({ currentUser, t, language }) {
                                     // Update local state
                                     const updated = result.data || { ...existingLead, ...updatedFields };
                                     setLeads(prev => prev.map(l => l.id === existingLead.id ? updated : l));
-                                    return updated;
+                                    return { ...updated, _action: 'updated' };
                                 } else {
                                     throw new Error(result.error?.message || 'Update failed');
                                 }
                             } else {
                                 // CREATE new lead
                                 const payload = {
-                                    stage: 'NEW',
+                                    stage: normalizeStage(data.stage),
                                     source: 'IMPORT',
                                     ...data
                                 };
@@ -1070,7 +1081,7 @@ function Leads({ currentUser, t, language }) {
                                     // Update local state
                                     const newLead = result.data;
                                     setLeads(prev => [newLead, ...prev]);
-                                    return newLead;
+                                    return { ...newLead, _action: 'created' };
                                 } else {
                                     throw new Error(result.error?.message || 'Create failed');
                                 }
@@ -1086,7 +1097,7 @@ function Leads({ currentUser, t, language }) {
                     }}
                 />
             </Modal>
-        </div>
+        </div >
     );
 }
 
