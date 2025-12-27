@@ -287,27 +287,59 @@ function BulkImporter({
         setCurrentStep(2);
     };
 
-    // Auto-map fields based on column name similarity
+    // Common column aliases for auto-mapping
+    const COMMON_MAPPINGS = {
+        name: ['name', 'full name', 'fullname', 'שם', 'שם מלא', 'first name', 'firstName'],
+        email: ['email', 'e-mail', 'mail', 'אימייל', 'דואר אלקטרוני'],
+        phone: ['phone', 'mobile', 'cellphone', 'tel', 'telephone', 'טלפון', 'נייד'],
+        company: ['company', 'organization', 'business', 'חברה', 'ארגון', 'companyName'],
+        stage: ['stage', 'status', 'phase', 'שלב', 'סטטוס', 'leadStatus'],
+        source: ['source', 'origin', 'מקור'],
+        estimatedValue: ['value', 'amount', 'estimated value', 'deal value', 'שווי', 'סכום', 'ערך']
+    };
+
+    // Auto-map fields based on column name similarity and common aliases
     const autoMapFields = (columns) => {
         const mappings = {};
+        const usedColumns = new Set();
+        const columnsLower = columns.map(c => c.toLowerCase());
 
         targetFields.forEach(field => {
-            // Try to find a matching source column
-            const fieldNameLower = field.key.toLowerCase();
-            const fieldLabelLower = (field.label || '').toLowerCase();
+            const fieldKey = field.key;
+            let matchedColumn = null;
 
-            const matchedColumn = columns.find(col => {
-                const colLower = col.toLowerCase();
-                return colLower === fieldNameLower ||
-                    colLower === fieldLabelLower ||
-                    colLower.includes(fieldNameLower) ||
-                    fieldNameLower.includes(colLower) ||
-                    colLower.includes(fieldLabelLower) ||
-                    fieldLabelLower.includes(colLower);
-            });
+            // 1. Try strategy: Common Mappings
+            if (COMMON_MAPPINGS[fieldKey]) {
+                const aliasMatch = columns.find(col =>
+                    COMMON_MAPPINGS[fieldKey].includes(col.toLowerCase()) && !usedColumns.has(col)
+                );
+                if (aliasMatch) matchedColumn = aliasMatch;
+            }
+
+            // 2. Try strategy: Exact Key Match (Case Insensitive)
+            if (!matchedColumn) {
+                const exactMatch = columns.find(col =>
+                    col.toLowerCase() === fieldKey.toLowerCase() && !usedColumns.has(col)
+                );
+                if (exactMatch) matchedColumn = exactMatch;
+            }
+
+            // 3. Try strategy: Fuzzy Match (Contains)
+            if (!matchedColumn) {
+                const fuzzyMatch = columns.find(col => {
+                    if (usedColumns.has(col)) return false;
+                    const colLower = col.toLowerCase();
+                    const keyLower = fieldKey.toLowerCase();
+                    const labelLower = (field.label || '').toLowerCase();
+                    return colLower.includes(keyLower) || keyLower.includes(colLower) ||
+                        (labelLower && (colLower.includes(labelLower) || labelLower.includes(colLower)));
+                });
+                if (fuzzyMatch) matchedColumn = fuzzyMatch;
+            }
 
             if (matchedColumn) {
-                mappings[field.key] = matchedColumn;
+                mappings[fieldKey] = matchedColumn;
+                usedColumns.add(matchedColumn);
             }
         });
 
