@@ -1021,6 +1021,20 @@ function Leads({ currentUser, t, language }) {
                         { key: 'estimatedValue', label: language === 'he' ? 'ערך משוער' : 'Est. Value', type: 'number', required: false }
                     ]}
                     onImport={async (data) => {
+                        // Helper to normalize stage
+                        const normalizeStage = (val) => {
+                            if (!val) return 'NEW';
+                            const str = String(val).trim();
+                            const upper = str.toUpperCase();
+                            // Direct ID match
+                            if (LEAD_STAGES[upper]) return upper;
+                            // Label match (He/En)
+                            const match = Object.values(LEAD_STAGES).find(s =>
+                                s.label.en.toUpperCase() === upper || s.label.he === str
+                            );
+                            return match ? match.id : 'NEW';
+                        };
+
                         // Normalize email for check
                         const normalizeEmail = (e) => e?.toLowerCase().trim();
                         const existingLead = leads.find(l => normalizeEmail(l.email) === normalizeEmail(data.email));
