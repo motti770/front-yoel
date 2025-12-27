@@ -1,5 +1,86 @@
 # דרישות Backend - מערכת CRM
 ## מסמך למפתח Backend
+**עודכן:** 28 בדצמבר 2025
+
+---
+
+## ⚡ עדיפויות
+
+| עדיפות | API | סטטוס |
+|--------|-----|-------|
+| 🔴 גבוהה | Leads CRUD | צריך לבדוק |
+| 🔴 גבוהה | Sales Pipeline Stages | חדש |
+| 🟡 בינונית | Stock Orders | חדש |
+| 🟡 בינונית | Product Pricing | חדש |
+
+---
+
+## 0. ניהול לידים (Leads) - 🔴 עדיפות גבוהה
+
+### Endpoints נדרשים:
+
+```
+GET /leads
+```
+Query params: `?stage=NEW&source=WEBSITE&search=text&page=1&limit=20`
+
+```
+POST /leads
+```
+Body:
+```json
+{
+  "name": "שם הליד",
+  "email": "email@example.com",
+  "phone": "050-1234567",
+  "company": "שם חברה",
+  "source": "WEBSITE|REFERRAL|COLD_CALL|SOCIAL|EVENT|OTHER",
+  "stage": "NEW|CONTACTED|QUALIFIED|PROPOSAL|NEGOTIATION|WON|LOST",
+  "estimatedValue": 10000,
+  "notes": "הערות",
+  "assignedTo": "userId",
+  "productId": "optional - productId"
+}
+```
+
+```
+PUT /leads/:id
+```
+עדכון פרטי ליד (כולל שינוי stage)
+
+⚠️ **חשוב:** כאשר `stage` משתנה, לעדכן גם `stageUpdatedAt = NOW()` לצורך חישוב SLA!
+
+```
+DELETE /leads/:id
+```
+
+```
+POST /leads/:id/convert
+```
+המרת ליד ללקוח - יוצר רשומה ב-Customers
+
+### מבנה DB מוצע:
+```sql
+CREATE TABLE leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  company VARCHAR(255),
+  source VARCHAR(50) DEFAULT 'OTHER',
+  stage VARCHAR(50) DEFAULT 'NEW',
+  estimated_value DECIMAL(10,2) DEFAULT 0,
+  notes TEXT,
+  assigned_to UUID REFERENCES users(id),
+  product_id UUID REFERENCES products(id),
+  stage_updated_at TIMESTAMP DEFAULT NOW(), -- לחישוב SLA!
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_leads_stage ON leads(stage);
+CREATE INDEX idx_leads_assigned ON leads(assigned_to);
+```
 
 ---
 
