@@ -334,7 +334,7 @@ function AppContent() {
                 </button>
 
                 {showNotifications && (
-                  <div className="dropdown-menu notifications-dropdown" style={{ position: 'absolute', insetInlineEnd: 0, top: 'calc(100% + 8px)', zIndex: 1000, minWidth: '320px', maxWidth: '400px' }}>
+                  <div className="dropdown-menu notifications-dropdown" style={{ position: 'absolute', insetInlineEnd: 0, insetInlineStart: 'auto', left: 'unset', right: 'unset', top: 'calc(100% + 8px)', zIndex: 1000, minWidth: '320px', maxWidth: '400px', transform: 'none' }}>
                     <div className="dropdown-header">
                       <h3>{language === 'he' ? 'התראות' : 'Notifications'}</h3>
                       <button className="text-btn">{language === 'he' ? 'סמן הכל כנקרא' : 'Mark all read'}</button>
@@ -381,7 +381,7 @@ function AppContent() {
                 </div>
 
                 {showProfileMenu && (
-                  <div className="dropdown-menu profile-dropdown" style={{ position: 'absolute', insetInlineEnd: 0, top: 'calc(100% + 8px)', zIndex: 1000, minWidth: '240px', maxWidth: '300px' }}>
+                  <div className="dropdown-menu profile-dropdown" style={{ position: 'absolute', insetInlineEnd: 0, insetInlineStart: 'auto', left: 'unset', right: 'unset', top: 'calc(100% + 8px)', zIndex: 1000, minWidth: '240px', maxWidth: '300px', transform: 'none' }}>
                     <div className="dropdown-header user-header">
                       <div className="avatar large" style={{ background: roleColors[currentUser.role] }}>
                         {currentUser.firstName?.charAt(0) || ''}{currentUser.lastName?.charAt(0) || ''}
