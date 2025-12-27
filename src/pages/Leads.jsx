@@ -803,14 +803,7 @@ function Leads({ currentUser, t, language }) {
                 </div>
 
                 <div className="header-actions">
-                    <button className="btn btn-outline" onClick={scanForDuplicates} title={language === 'he' ? 'סרוק כפילויות' : 'Scan Duplicates'}>
-                        <Users size={18} />
-                        {language === 'he' ? 'ניקוי כפולים' : 'Cleanup'}
-                    </button>
-                    <button className="btn btn-outline" onClick={() => setShowImportModal(true)}>
-                        <Upload size={18} />
-                        {language === 'he' ? 'ייבוא' : 'Import'}
-                    </button>
+
                     <button className="btn btn-primary" onClick={openAddModal}>
                         <Plus size={18} />
                         {language === 'he' ? 'ליד חדש' : 'New Lead'}
@@ -824,6 +817,15 @@ function Leads({ currentUser, t, language }) {
                     <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
                 </div>
                 <div className="toolbar-right">
+                    <div className="toolbar-actions-group" style={{ display: 'flex', gap: '8px', marginInlineEnd: '12px', borderInlineEnd: '1px solid rgba(255,255,255,0.1)', paddingInlineEnd: '12px' }}>
+                        <button className="icon-btn" onClick={() => setShowImportModal(true)} title={language === 'he' ? 'ייבוא לידים' : 'Import Leads'}>
+                            <Upload size={18} />
+                        </button>
+                        <button className="icon-btn" onClick={scanForDuplicates} title={language === 'he' ? 'ניקוי כפילויות' : 'Cleanup Duplicates'}>
+                            <Users size={18} />
+                        </button>
+                    </div>
+
                     {(currentView === VIEW_TYPES.TABLE || currentView === VIEW_TYPES.LIST || currentView === VIEW_TYPES.GRID) && (
                         <div className="group-by-control" style={{ marginInlineEnd: '12px', borderInlineEnd: '1px solid rgba(255,255,255,0.1)', paddingInlineEnd: '12px' }}>
                             <div className="dropdown-wrapper" style={{ position: 'relative' }}>
