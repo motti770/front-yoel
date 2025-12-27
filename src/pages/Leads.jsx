@@ -336,6 +336,9 @@ function Leads({ currentUser, t, language }) {
         setShowConvertModal(true);
     };
 
+    // Safety fallback for legacy calls
+    const handleConvertToCustomer = () => handleOpenConvertModal(selectedLead);
+
     const processConversion = async () => {
         if (!selectedLead) return;
         setSaving(true);
