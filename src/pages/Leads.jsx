@@ -98,6 +98,7 @@ function Leads({ currentUser, t, language }) {
         source: 'WEBSITE',
         stage: 'NEW',
         estimatedValue: '',
+        priority: 'MEDIUM', // Default priority
         notes: '',
         nextFollowUp: ''
     });
@@ -722,8 +723,11 @@ function Leads({ currentUser, t, language }) {
                             </div>
 
                             {!isCollapsed && (
-                                <div className="group-content" style={{ padding: '16px' }}>
-                                    {currentView === VIEW_TYPES.GRID ? renderGridView(group.items) : renderTableView(group.items)}
+                                <div className="group-content">
+                                    {(currentView === VIEW_TYPES.TABLE || currentView === VIEW_TYPES.LIST)
+                                        ? renderTableView(group.items)
+                                        : renderGridView(group.items)
+                                    }
                                 </div>
                             )}
                         </div>
@@ -881,6 +885,7 @@ function Leads({ currentUser, t, language }) {
                                     <option value="stage">{language === 'he' ? 'לפי שלב' : 'By Stage'}</option>
                                     <option value="date">{language === 'he' ? 'לפי תאריך' : 'By Date'}</option>
                                     <option value="source">{language === 'he' ? 'לפי מקור' : 'By Source'}</option>
+                                    <option value="priority">{language === 'he' ? 'לפי דחיפות' : 'By Priority'}</option>
                                 </select>
                                 <Layers size={16} style={{ position: 'absolute', insetInlineStart: '10px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none' }} />
                             </div>
@@ -1003,6 +1008,20 @@ function Leads({ currentUser, t, language }) {
                                 {Object.values(LEAD_STAGES).map(stage => (
                                     <option key={stage.id} value={stage.id}>{stage.label[language]}</option>
                                 ))}
+                            </select>
+                        </div>
+                        <div className="form-group">
+                            <label>{language === 'he' ? 'דחיפות' : 'Priority'}</label>
+                            <select
+                                className="form-input"
+                                value={formData.priority || 'MEDIUM'}
+                                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                                style={{ borderInlineStart: formData.priority === 'URGENT' ? '3px solid #ef4444' : '1px solid rgba(255,255,255,0.1)' }}
+                            >
+                                <option value="LOW">{language === 'he' ? 'נמוכה' : 'Low'}</option>
+                                <option value="MEDIUM">{language === 'he' ? 'רגילה' : 'Medium'}</option>
+                                <option value="HIGH">{language === 'he' ? 'גבוהה' : 'High'}</option>
+                                <option value="URGENT">{language === 'he' ? 'דחוף!' : 'Urgent!'}</option>
                             </select>
                         </div>
                     </div>
