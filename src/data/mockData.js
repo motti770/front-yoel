@@ -785,6 +785,7 @@ export const getNavItemsForRole = (role) => {
         // Inventory
         { path: '/products', labelKey: 'products', icon: 'Package', roles: ['ADMIN', 'MANAGER'], category: 'inventory' },
         { path: '/assets', labelKey: 'assets', icon: 'FolderOpen', roles: ['ADMIN', 'MANAGER'], category: 'inventory' },
+        { path: '/stock-orders', labelKey: 'stockOrders', icon: 'Warehouse', roles: ['ADMIN', 'MANAGER'], category: 'inventory' },
 
         // Management & System
         { path: '/analytics', labelKey: 'analytics', icon: 'BarChart3', roles: ['ADMIN', 'MANAGER'], category: 'management' },

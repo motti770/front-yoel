@@ -14,6 +14,7 @@ export const translations = {
         departments: 'מחלקות',
         parameters: 'פרמטרים',
         assets: 'ספריית נכסים',
+        stockOrders: 'ייצור למלאי',
         import: 'ייבוא',
         calendar: 'לוח שנה',
         analytics: 'אנליטיקס',
