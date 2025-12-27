@@ -29,9 +29,12 @@ import {
     MoreHorizontal,
     Users,
     CheckCircle2,
-    Layers
+    Layers,
+    Briefcase,
+    CheckSquare,
+    Square
 } from 'lucide-react';
-import { leadsService, customersService } from '../services/api';
+import { leadsService, customersService, ordersService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
@@ -78,6 +81,7 @@ function Leads({ currentUser, t, language }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showConvertModal, setShowConvertModal] = useState(false);
+    const [conversionChecks, setConversionChecks] = useState({ offerAccepted: false, designApproved: false });
     const [selectedLead, setSelectedLead] = useState(null);
     const [toast, setToast] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -324,53 +328,61 @@ function Leads({ currentUser, t, language }) {
         }
     };
 
-    // Convert lead to customer
-    const handleConvertToCustomer = async () => {
+
+    // --- Conversion Logic ---
+    const handleOpenConvertModal = (lead) => {
+        setSelectedLead(lead);
+        setConversionChecks({ offerAccepted: false, designApproved: false });
+        setShowConvertModal(true);
+    };
+
+    const processConversion = async () => {
+        if (!selectedLead) return;
+        setSaving(true);
+
         try {
-            setSaving(true);
-            console.log('[Leads] converting lead:', selectedLead);
-
-            // Try to use convert endpoint first
-            try {
-                const result = await leadsService.convert(selectedLead.id);
-                if (result.success) {
-                    setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, stage: 'WON' } : l));
-                    setShowConvertModal(false);
-                    showToast(language === 'he' ? 'ליד הומר ללקוח!' : 'Lead converted to customer!');
-                    return;
-                }
-            } catch (convertError) {
-                console.log('[Leads] Convert endpoint failed, trying manual creation:', convertError);
-            }
-
-            // Fallback: create customer manually
-            const customerData = {
+            // 1. Create Customer
+            const customerPayload = {
                 name: selectedLead.name,
                 email: selectedLead.email,
                 phone: selectedLead.phone,
-                companyName: selectedLead.company,
-                notes: selectedLead.notes,
-                status: 'ACTIVE'
+                companyName: selectedLead.company || selectedLead.name,
+                source: selectedLead.source,
+                notes: `Original Lead ID: ${selectedLead.id}\n${selectedLead.notes || ''}`
             };
 
-            console.log('[Leads] Creating customer with data:', customerData);
-            const customerResult = await customersService.create(customerData);
+            console.log('[Convert] Creating customer...');
+            const customerRes = await customersService.create(customerPayload);
+            if (!customerRes.success) throw new Error(customerRes.error?.message || 'Failed to create customer');
 
-            if (customerResult.success) {
-                console.log('[Leads] Customer created successfully:', customerResult.data);
+            const newCustomer = customerRes.data;
 
-                // Update lead stage only after successful customer creation
-                await leadsService.updateStage(selectedLead.id, 'WON');
-                setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, stage: 'WON' } : l));
+            // 2. Create Order
+            console.log('[Convert] Creating order...');
+            const orderPayload = {
+                customerId: newCustomer.id,
+                status: 'NEW',
+                totalAmount: Number(selectedLead.estimatedValue) || 0,
+                title: `Order: ${selectedLead.name}`,
+                notes: `Converted from Lead. \nChecklist Verified: \n- Offer Accepted: Yes\n- Design Approved: Yes`
+            };
 
-                setShowConvertModal(false);
-                showToast(language === 'he' ? 'ליד הומר ללקוח!' : 'Lead converted to customer!');
-            } else {
-                throw new Error(customerResult.error?.message || 'Failed to create customer');
-            }
-        } catch (err) {
-            console.error('[Leads] Convert error:', err);
-            showToast(err.message || err.error?.message || 'Failed to convert', 'error');
+            await ordersService.create(orderPayload);
+
+            // 3. Delete Lead (or convert status)
+            // Ideally we convert status, but current flow seems to be Delete after convert?
+            // User requested: "Lead passes to become customer". Usually means lead is gone from leads list.
+            console.log('[Convert] Deleting original lead...');
+            await leadsService.delete(selectedLead.id);
+
+            // 4. Update UI
+            setLeads(prev => prev.filter(l => l.id !== selectedLead.id));
+            setShowConvertModal(false);
+            showToast(language === 'he' ? 'הליד הומר ללקוח והזמנה נפתחה בהצלחה!' : 'Lead converted and order created successfully!');
+
+        } catch (error) {
+            console.error('[Convert] Error:', error);
+            showToast(language === 'he' ? 'שגיאה בתהליך ההמרה' : 'Conversion failed', 'error');
         } finally {
             setSaving(false);
         }
@@ -605,6 +617,13 @@ function Leads({ currentUser, t, language }) {
                                 <div className="action-buttons">
                                     <button className="action-btn" onClick={() => handleView(lead)}><Eye size={14} /></button>
                                     <button className="action-btn" onClick={() => handleEdit(lead)}><Edit size={14} /></button>
+                                    <button
+                                        className="action-btn"
+                                        title={language === 'he' ? 'המר ללקוח' : 'Convert to Customer'}
+                                        onClick={() => handleOpenConvertModal(lead)}
+                                    >
+                                        <Briefcase size={14} />
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -1256,6 +1275,70 @@ function Leads({ currentUser, t, language }) {
                         setShowImportModal(false);
                     }}
                 />
+            </Modal>
+
+            {/* Convert Modal */}
+            <Modal
+                isOpen={showConvertModal}
+                onClose={() => setShowConvertModal(false)}
+                title={language === 'he' ? 'המרת ליד ללקוח' : 'Convert Lead to Customer'}
+            >
+                <div className="convert-modal-content" style={{ padding: '20px' }}>
+                    {selectedLead && (
+                        <>
+                            <div className="lead-summary glass-card" style={{ padding: '16px', marginBottom: '24px' }}>
+                                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{selectedLead.name}</h3>
+                                <div style={{ opacity: 0.7 }}>
+                                    <div>{selectedLead.company}</div>
+                                    <div>₪{Number(selectedLead.estimatedValue || 0).toLocaleString()}</div>
+                                </div>
+                            </div>
+
+                            <div className="checklist-section" style={{ marginBottom: '24px' }}>
+                                <h4 style={{ marginBottom: '16px', fontSize: '1rem' }}>{language === 'he' ? 'בדיקות חובה' : 'Pre-conversion Checks'}</h4>
+
+                                <div className="checklist-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', cursor: 'pointer' }}
+                                    onClick={() => setConversionChecks(prev => ({ ...prev, offerAccepted: !prev.offerAccepted }))}>
+                                    {conversionChecks.offerAccepted ?
+                                        <CheckSquare size={20} className="text-success" style={{ color: '#10b981' }} /> :
+                                        <Square size={20} style={{ opacity: 0.5 }} />
+                                    }
+                                    <span style={{ opacity: conversionChecks.offerAccepted ? 1 : 0.7 }}>
+                                        {language === 'he' ? 'הצעת מחיר אושרה' : 'Price Offer Accepted'}
+                                    </span>
+                                </div>
+
+                                <div className="checklist-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
+                                    onClick={() => setConversionChecks(prev => ({ ...prev, designApproved: !prev.designApproved }))}>
+                                    {conversionChecks.designApproved ?
+                                        <CheckSquare size={20} className="text-success" style={{ color: '#10b981' }} /> :
+                                        <Square size={20} style={{ opacity: 0.5 }} />
+                                    }
+                                    <span style={{ opacity: conversionChecks.designApproved ? 1 : 0.7 }}>
+                                        {language === 'he' ? 'עיצוב/מפרט אושר' : 'Design/Specs Approved'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
+                                <button className="btn btn-outline" onClick={() => setShowConvertModal(false)}>
+                                    {language === 'he' ? 'ביטול' : 'Cancel'}
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={processConversion}
+                                    disabled={!conversionChecks.offerAccepted || !conversionChecks.designApproved || saving}
+                                    style={{
+                                        opacity: (!conversionChecks.offerAccepted || !conversionChecks.designApproved) ? 0.5 : 1
+                                    }}
+                                >
+                                    {saving ? <Loader2 className="spinner" size={16} /> : <Briefcase size={16} />}
+                                    {language === 'he' ? 'בצע המרה וצור הזמנה' : 'Convert & Create Order'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             </Modal>
         </div >
     );

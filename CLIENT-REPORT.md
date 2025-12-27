@@ -43,9 +43,10 @@
 ### פיצ'רים עובדים:
 - ✅ **חדש: כלי לייבוא המוני וניקוי כפילויות חכם**
 - ✅ **חדש: תפריט צד מאורגן לפי קטגוריות**
+- ✅ **חדש: סידור לידים בקבוצות (לפי תאריך/שלב/מקור)**
+- ✅ **חדש: תהליך המרה חכם ללקוח (יוצר הזמנה אוטומטית + צ'קליסט חובה)**
 - ✅ 3 שפות (עברית, אנגלית, אוקראינית)
 - ✅ 6 סוגי תצוגות (טבלה, כרטיסים, קנבן...)
-- ✅ קבוצות בסגנון Monday
 - ✅ סינון וחיפוש מתקדם
 - ✅ עיצוב מודרני ויפה
 
@@ -121,8 +122,10 @@ https://the-shul.app.mottidokib.com
 | מטריקה | ערך |
 |--------|-----|
 | **מה עשינו** | 80% מהמערכת בנויה |
-| **מה חדש** | כלי יבוא וניקוי נתונים |
-| **מה נשאר** | טופס הזמנה חכם + זרימת עבודה |
+| **מה חדש** | כלי יבוא וניקוי נתונים- [x] **New Metric:** "Open Proposals" added to Leads dashboard.
+- [x] **Persistent Import:** Fixed issue where imported leads vanished on refresh.
+- [x] **Smart Data Import:** Added normalization for stages (hebrew/english aliases).
+- [x] **Bug Fixes:** Fixed huge numbers in metrics display (string concatenation issue).עבודה |
 | **זמן להשלמה** | שבוע וחצי |
 
 ---
