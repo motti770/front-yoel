@@ -1054,6 +1054,9 @@ function Leads({ currentUser, t, language }) {
                             if (existingLead) {
                                 // UPDATE existing lead
                                 const updatedFields = { ...data };
+                                if (updatedFields.estimatedValue) updatedFields.estimatedValue = Number(updatedFields.estimatedValue);
+                                if (updatedFields.stage) updatedFields.stage = normalizeStage(updatedFields.stage);
+
                                 console.log('[Import] Updating lead:', existingLead.id);
 
                                 const result = await leadsService.update(existingLead.id, updatedFields);
@@ -1064,16 +1067,20 @@ function Leads({ currentUser, t, language }) {
                                     setLeads(prev => prev.map(l => l.id === existingLead.id ? updated : l));
                                     return { ...updated, _action: 'updated' };
                                 } else {
-                                    throw new Error(result.error?.message || 'Update failed');
+                                    const errorMsg = result.error?.message || 'Update failed';
+                                    console.error('[Import] Update error:', result);
+                                    throw new Error(errorMsg);
                                 }
                             } else {
                                 // CREATE new lead
+                                // Note: Backend requires valid ENUM for source. 'IMPORT' is not valid. Using 'OTHER'.
                                 const payload = {
+                                    ...data,
                                     stage: normalizeStage(data.stage),
-                                    source: 'IMPORT',
-                                    ...data
+                                    source: 'OTHER',
+                                    estimatedValue: Number(data.estimatedValue) || 0
                                 };
-                                console.log('[Import] Creating new lead');
+                                console.log('[Import] Creating new lead', payload);
 
                                 const result = await leadsService.create(payload);
 
@@ -1083,11 +1090,13 @@ function Leads({ currentUser, t, language }) {
                                     setLeads(prev => [newLead, ...prev]);
                                     return { ...newLead, _action: 'created' };
                                 } else {
-                                    throw new Error(result.error?.message || 'Create failed');
+                                    const errorMsg = result.error?.message || 'Create failed';
+                                    console.error('[Import] Create error:', result);
+                                    throw new Error(errorMsg);
                                 }
                             }
                         } catch (err) {
-                            console.error('[Import] Error:', err);
+                            console.error('[Import] Exception:', err);
                             throw err;
                         }
                     }}
