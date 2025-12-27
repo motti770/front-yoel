@@ -28,7 +28,8 @@ import {
     ChevronRight,
     MoreHorizontal,
     Users,
-    CheckCircle2
+    CheckCircle2,
+    Layers
 } from 'lucide-react';
 import { leadsService, customersService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
@@ -66,6 +67,10 @@ function Leads({ currentUser, t, language }) {
     const [stageFilter, setStageFilter] = useState('all');
     const [sourceFilter, setSourceFilter] = useState('all');
     const [currentView, setCurrentView] = useState(VIEW_TYPES.PIPELINE);
+
+    // Grouping
+    const [groupBy, setGroupBy] = useState('none');
+    const [expandedGroups, setExpandedGroups] = useState({});
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -495,8 +500,73 @@ function Leads({ currentUser, t, language }) {
         );
     }
 
+    // --- Grouping Logic ---
+    const toggleGroup = (groupKey) => {
+        setExpandedGroups(prev => ({
+            ...prev,
+            [groupKey]: prev[groupKey] === undefined ? false : !prev[groupKey] // Default open, so undefined -> false meant 'closing'? No.
+            // Let's decided: undefined means CLOSED or OPEN?
+            // Usually easier if default is OPEN (true).
+            // Logic: if in map, use value. If not, use default.
+        }));
+        // Actually, cleaner: store IDs of COLLAPSED groups.
+    };
+
+    const isGroupCollapsed = (groupKey) => expandedGroups[groupKey] === true;
+    const toggleGroupCollapse = (groupKey) => {
+        setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
+    };
+
+    const getGroupedLeads = () => {
+        const groups = {};
+
+        filteredLeads.forEach(lead => {
+            let key = 'other';
+            let title = language === 'he' ? 'אחר' : 'Other';
+            let sortValue = 0; // For sorting groups if needed
+
+            if (groupBy === 'stage') {
+                key = lead.stage;
+                const stageConfig = LEAD_STAGES[lead.stage];
+                title = stageConfig ? (stageConfig.label[language] || stageConfig.label.he) : lead.stage;
+            } else if (groupBy === 'source') {
+                key = lead.source || 'OTHER';
+                const sourceConfig = LEAD_SOURCES[key === 'IMPORT' ? 'OTHER' : key] || LEAD_SOURCES['OTHER'];
+                title = sourceConfig ? (sourceConfig.label[language] || sourceConfig.label.he) : key;
+            } else if (groupBy === 'date') {
+                const date = new Date(lead.createdAt);
+                if (!isNaN(date.getTime())) {
+                    key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                    title = date.toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' });
+                    sortValue = date.getTime();
+                } else {
+                    key = 'no-date';
+                    title = language === 'he' ? 'ללא תאריך' : 'No Date';
+                }
+            }
+
+            if (!groups[key]) {
+                groups[key] = { title, items: [], id: key, sortValue };
+            }
+            groups[key].items.push(lead);
+        });
+
+        // Sort groups? Date: new to old. Stage: predefined order?
+        return Object.values(groups).sort((a, b) => {
+            if (groupBy === 'date') return b.sortValue - a.sortValue; // Newest first
+            if (groupBy === 'stage') {
+                // predefined order based on likely workflow
+                const stagesOrder = Object.keys(LEAD_STAGES);
+                return stagesOrder.indexOf(a.id) - stagesOrder.indexOf(b.id);
+            }
+            return 0; // Source: arbitrary
+        });
+    };
+
+    // --- Render Views ---
+
     // TABLE VIEW
-    const renderTableView = () => (
+    const renderTableView = (data = filteredLeads) => (
         <div className="table-container glass-card">
             <table className="data-table">
                 <thead>
@@ -510,7 +580,7 @@ function Leads({ currentUser, t, language }) {
                     </tr>
                 </thead>
                 <tbody>
-                    {filteredLeads.map((lead) => (
+                    {data.map((lead) => (
                         <tr key={lead.id}>
                             <td>
                                 <div className="customer-name-cell">
@@ -523,14 +593,14 @@ function Leads({ currentUser, t, language }) {
                             <td>{lead.company || '-'}</td>
                             <td>
                                 <span className="status-badge" style={{
-                                    background: `${LEAD_STAGES[lead.stage]?.color}20`,
-                                    color: LEAD_STAGES[lead.stage]?.color
+                                    background: `${LEAD_STAGES[lead.stage]?.color || '#888'}20`,
+                                    color: LEAD_STAGES[lead.stage]?.color || '#888'
                                 }}>
                                     {LEAD_STAGES[lead.stage]?.label[language] || lead.stage}
                                 </span>
                             </td>
-                            <td>₪{(lead.estimatedValue || 0).toLocaleString()}</td>
-                            <td>{LEAD_SOURCES[lead.source]?.label[language]}</td>
+                            <td>₪{(Number(lead.estimatedValue) || 0).toLocaleString()}</td>
+                            <td>{LEAD_SOURCES[lead.source]?.label[language] || lead.source}</td>
                             <td>
                                 <div className="action-buttons">
                                     <button className="action-btn" onClick={() => handleView(lead)}><Eye size={14} /></button>
@@ -539,7 +609,7 @@ function Leads({ currentUser, t, language }) {
                             </td>
                         </tr>
                     ))}
-                    {filteredLeads.length === 0 && (
+                    {data.length === 0 && (
                         <tr>
                             <td colSpan="6" className="text-center p-4">
                                 {language === 'he' ? 'לא נמצאו לידים' : 'No leads found'}
@@ -552,40 +622,102 @@ function Leads({ currentUser, t, language }) {
     );
 
     // GRID VIEW
-    const renderGridView = () => (
+    const renderGridView = (data = filteredLeads) => (
         <div className="customers-grid">
-            {filteredLeads.map(lead => (
+            {data.map(lead => (
                 <div key={lead.id} className="customer-card glass-card" onClick={() => handleView(lead)}>
                     <div className="card-header">
-                        <div className="customer-avatar large" style={{ background: LEAD_STAGES[lead.stage]?.color }}>
+                        <div className="customer-avatar large" style={{ background: LEAD_STAGES[lead.stage]?.color || '#888' }}>
                             <User size={24} />
                         </div>
-                        <span className="source-badge">{LEAD_SOURCES[lead.source]?.label[language]}</span>
+                        <span className="source-badge">{LEAD_SOURCES[lead.source]?.label[language] || lead.source}</span>
                     </div>
                     <h4>{lead.name}</h4>
                     <p className="company">{lead.company || '-'}</p>
                     <div className="card-stats">
                         <div className="stat">
-                            <span className="stat-value">₪{(lead.estimatedValue || 0).toLocaleString()}</span>
+                            <span className="stat-value">₪{(Number(lead.estimatedValue) || 0).toLocaleString()}</span>
                             <span className="stat-label">{language === 'he' ? 'ערך' : 'Value'}</span>
                         </div>
                         <div className="stat">
-                            <span className="stat-value" style={{ color: LEAD_STAGES[lead.stage]?.color }}>
-                                {LEAD_STAGES[lead.stage]?.label[language]}
+                            <span className="stat-value" style={{ color: LEAD_STAGES[lead.stage]?.color || '#888' }}>
+                                {LEAD_STAGES[lead.stage]?.label[language] || lead.stage}
                             </span>
                             <span className="stat-label">{language === 'he' ? 'שלב' : 'Stage'}</span>
                         </div>
                     </div>
                 </div>
             ))}
+            {data.length === 0 && (
+                <div className="text-center p-4 w-100" style={{ gridColumn: '1/-1', opacity: 0.7 }}>
+                    {language === 'he' ? 'לא נמצאו לידים' : 'No leads found'}
+                </div>
+            )}
         </div>
     );
+
+    // GROUPED VIEW
+    const renderGroupedView = () => {
+        const groupedData = getGroupedLeads();
+
+        return (
+            <div className="grouped-view">
+                {groupedData.map(group => {
+                    const isCollapsed = isGroupCollapsed(group.id);
+                    return (
+                        <div key={group.id} className="group-section glass-card" style={{ marginBottom: '16px', padding: '0', overflow: 'hidden' }}>
+                            <div
+                                className="group-header"
+                                onClick={() => toggleGroupCollapse(group.id)}
+                                style={{
+                                    padding: '12px 16px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    cursor: 'pointer',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    borderBottom: isCollapsed ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 600 }}>
+                                    {isCollapsed ? <ChevronRight size={20} /> : <ChevronDown size={20} />}
+                                    <span style={{ fontSize: '1.2rem' }}>{group.title}</span>
+                                    <span className="badge" style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        padding: '2px 8px',
+                                        borderRadius: '12px',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        {group.items.length}
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                                    ₪{formatCurrencyMetric(group.items.reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0))}
+                                </div>
+                            </div>
+
+                            {!isCollapsed && (
+                                <div className="group-content" style={{ padding: '16px' }}>
+                                    {currentView === VIEW_TYPES.GRID ? renderGridView(group.items) : renderTableView(group.items)}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    };
 
     // KANBAN / PIPELINE WRAPPER
     const renderKanbanView = () => renderPipelineView(); // Reuse existing pipeline logic but filtered
 
     // Main Render Content Switcher
     const renderContent = () => {
+        if (groupBy !== 'none' && currentView !== VIEW_TYPES.PIPELINE && currentView !== VIEW_TYPES.KANBAN) {
+            return renderGroupedView();
+        }
+
         switch (currentView) {
             case VIEW_TYPES.TABLE: return renderTableView();
             case VIEW_TYPES.GRID: return renderGridView();
@@ -670,6 +802,25 @@ function Leads({ currentUser, t, language }) {
                     <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
                 </div>
                 <div className="toolbar-right">
+                    {(currentView === VIEW_TYPES.TABLE || currentView === VIEW_TYPES.LIST || currentView === VIEW_TYPES.GRID) && (
+                        <div className="group-by-control" style={{ marginInlineEnd: '12px', borderInlineEnd: '1px solid rgba(255,255,255,0.1)', paddingInlineEnd: '12px' }}>
+                            <div className="dropdown-wrapper" style={{ position: 'relative' }}>
+                                <select
+                                    className="filter-select"
+                                    value={groupBy}
+                                    onChange={(e) => setGroupBy(e.target.value)}
+                                    style={{ paddingInlineStart: '34px' }}
+                                >
+                                    <option value="none">{language === 'he' ? 'ללא קיבוץ' : 'No Grouping'}</option>
+                                    <option value="stage">{language === 'he' ? 'לפי שלב' : 'By Stage'}</option>
+                                    <option value="date">{language === 'he' ? 'לפי תאריך' : 'By Date'}</option>
+                                    <option value="source">{language === 'he' ? 'לפי מקור' : 'By Source'}</option>
+                                </select>
+                                <Layers size={16} style={{ position: 'absolute', insetInlineStart: '10px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5, pointerEvents: 'none' }} />
+                            </div>
+                        </div>
+                    )}
+
                     <div className="search-input">
                         <Search size={18} />
                         <input
