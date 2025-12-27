@@ -1139,6 +1139,70 @@ function Leads({ currentUser, t, language }) {
                             </div>
                         </div>
 
+                        {/* Pipeline Timeline */}
+                        <div className="pipeline-timeline" style={{
+                            margin: '24px 0',
+                            padding: '16px',
+                            background: 'rgba(255,255,255,0.03)',
+                            borderRadius: '12px'
+                        }}>
+                            <h4 style={{ marginBottom: '16px', fontSize: '0.9rem', opacity: 0.7 }}>
+                                {language === 'he' ? 'מיקום בתהליך' : 'Pipeline Position'}
+                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '8px' }}>
+                                {Object.values(LEAD_STAGES).filter(s => s.id !== 'LOST').map((stage, index, arr) => {
+                                    const stageOrder = ['NEW', 'CONTACT', 'MEETING', 'NEGOTIATION', 'WON'];
+                                    const currentIndex = stageOrder.indexOf(selectedLead.stage);
+                                    const thisIndex = stageOrder.indexOf(stage.id);
+                                    const isPast = thisIndex < currentIndex;
+                                    const isCurrent = stage.id === selectedLead.stage;
+                                    const isLast = index === arr.length - 1;
+
+                                    return (
+                                        <div key={stage.id} style={{ display: 'flex', alignItems: 'center', flex: isLast ? '0 0 auto' : '1 1 0' }}>
+                                            <div style={{
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                background: isCurrent ? stage.color : isPast ? stage.color : 'rgba(255,255,255,0.1)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                opacity: isPast || isCurrent ? 1 : 0.4,
+                                                border: isCurrent ? '3px solid white' : 'none',
+                                                boxShadow: isCurrent ? '0 0 12px ' + stage.color : 'none',
+                                                transition: 'all 0.3s'
+                                            }}>
+                                                {isPast ? <Check size={14} /> : <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{index + 1}</span>}
+                                            </div>
+                                            {!isLast && (
+                                                <div style={{
+                                                    flex: 1,
+                                                    height: '3px',
+                                                    background: isPast ? stage.color : 'rgba(255,255,255,0.1)',
+                                                    marginInline: '4px',
+                                                    borderRadius: '2px',
+                                                    transition: 'all 0.3s'
+                                                }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', opacity: 0.6 }}>
+                                {Object.values(LEAD_STAGES).filter(s => s.id !== 'LOST').map(stage => (
+                                    <span key={stage.id} style={{
+                                        textAlign: 'center',
+                                        flex: 1,
+                                        fontWeight: stage.id === selectedLead.stage ? 'bold' : 'normal',
+                                        color: stage.id === selectedLead.stage ? stage.color : 'inherit'
+                                    }}>
+                                        {stage.label[language]}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+
                         {selectedLead.notes && (
                             <div className="detail-notes">
                                 <h4><MessageSquare size={16} /> {language === 'he' ? 'הערות' : 'Notes'}</h4>
