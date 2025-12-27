@@ -4,6 +4,16 @@
  */
 
 import axios from 'axios';
+import {
+    mockCustomers,
+    mockLeads,
+    mockOrders,
+    mockProducts,
+    mockUsers
+} from '../data/mockData';
+
+// Toggle mock mode
+const USE_MOCK = false;
 
 // API Configuration
 const API_URL = import.meta.env.VITE_API_URL || 'https://crm-api.app.mottidokib.com';

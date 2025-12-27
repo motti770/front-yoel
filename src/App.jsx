@@ -181,6 +181,24 @@ function AppContent() {
           </button>
         </aside>
 
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div
+            className="sidebar-overlay"
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 999, // Layer below sidebar (z-1000)
+              backdropFilter: 'blur(2px)'
+            }}
+          />
+        )}
+
         {/* Main Content */}
         <div className="main-content">
           {/* Top Header */}
