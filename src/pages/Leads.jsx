@@ -42,15 +42,27 @@ import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
 import './Leads.css';
 
-// Lead stages - Sales Pipeline
+// Lead stages - Sales Pipeline with SLA
 const LEAD_STAGES = {
-    NEW: { id: 'NEW', label: { he: 'חדש', en: 'New' }, color: '#667eea' },
-    CONTACTED: { id: 'CONTACTED', label: { he: 'יצירת קשר', en: 'Contacted' }, color: '#4facfe' },
-    QUALIFIED: { id: 'QUALIFIED', label: { he: 'מוסמך', en: 'Qualified' }, color: '#00f2fe' },
-    PROPOSAL: { id: 'PROPOSAL', label: { he: 'הצעת מחיר', en: 'Proposal' }, color: '#fee140' },
-    NEGOTIATION: { id: 'NEGOTIATION', label: { he: 'משא ומתן', en: 'Negotiation' }, color: '#f5576c' },
-    WON: { id: 'WON', label: { he: 'זכייה', en: 'Won' }, color: '#00c853' },
-    LOST: { id: 'LOST', label: { he: 'אבוד', en: 'Lost' }, color: '#ff5252' }
+    NEW: { id: 'NEW', label: { he: 'חדש', en: 'New' }, color: '#667eea', slaHours: 24 },
+    CONTACTED: { id: 'CONTACTED', label: { he: 'יצירת קשר', en: 'Contacted' }, color: '#4facfe', slaHours: 48 },
+    QUALIFIED: { id: 'QUALIFIED', label: { he: 'מוסמך', en: 'Qualified' }, color: '#00f2fe', slaHours: 72 },
+    PROPOSAL: { id: 'PROPOSAL', label: { he: 'הצעת מחיר', en: 'Proposal' }, color: '#fee140', slaHours: 96 },
+    NEGOTIATION: { id: 'NEGOTIATION', label: { he: 'משא ומתן', en: 'Negotiation' }, color: '#f5576c', slaHours: 168 },
+    WON: { id: 'WON', label: { he: 'זכייה', en: 'Won' }, color: '#00c853', slaHours: null },
+    LOST: { id: 'LOST', label: { he: 'אבוד', en: 'Lost' }, color: '#ff5252', slaHours: null }
+};
+
+// Helper to check if lead is overdue based on SLA
+const isLeadOverdue = (lead) => {
+    if (!lead.stageUpdatedAt && !lead.createdAt) return false;
+    const stageConfig = LEAD_STAGES[lead.stage];
+    if (!stageConfig?.slaHours) return false;
+
+    const enteredStageAt = new Date(lead.stageUpdatedAt || lead.createdAt);
+    const now = new Date();
+    const hoursInStage = (now - enteredStageAt) / (1000 * 60 * 60);
+    return hoursInStage > stageConfig.slaHours;
 };
 
 // Lead sources
