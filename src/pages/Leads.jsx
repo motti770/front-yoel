@@ -824,7 +824,15 @@ function Leads({ currentUser, t, language }) {
                     <button
                         className="btn btn-primary"
                         onClick={() => setShowActionsMenu(!showActionsMenu)}
-                        style={{ paddingInlineEnd: '12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                        style={{
+                            minWidth: '140px',
+                            paddingInline: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            whiteSpace: 'nowrap',
+                            justifyContent: 'center'
+                        }}
                     >
                         <Plus size={18} />
                         {language === 'he' ? 'הוסף ליד' : 'Add Lead'}
@@ -833,19 +841,19 @@ function Leads({ currentUser, t, language }) {
 
                     {showActionsMenu && (
                         <>
-                            <div className="dropdown-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowActionsMenu(false)} />
+                            <div className="dropdown-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 999 }} onClick={() => setShowActionsMenu(false)} />
                             <div className="actions-dropdown glass-card" style={{
                                 position: 'absolute',
                                 top: 'calc(100% + 8px)',
                                 insetInlineEnd: 0,
                                 width: '220px',
-                                zIndex: 100,
+                                zIndex: 1000,
                                 padding: '8px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: '4px',
                                 border: '1px solid rgba(255,255,255,0.1)',
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.4)'
                             }}>
                                 <button className="dropdown-item" onClick={() => { openAddModal(); setShowActionsMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '6px', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'start' }}>
                                     <UserPlus size={16} style={{ opacity: 0.7 }} />
