@@ -6,7 +6,12 @@ import {
     Palette,
     Shield,
     Save,
-    Check
+    Check,
+    GitBranch,
+    Plus,
+    Trash2,
+    GripVertical,
+    Edit3
 } from 'lucide-react';
 import './SettingsPage.css';
 
@@ -25,6 +30,48 @@ function SettingsPage({ currentUser }) {
         push: true,
         sms: false
     });
+
+    // Pipeline Stages State
+    const [salesStages, setSalesStages] = useState(() => {
+        const saved = localStorage.getItem('salesPipelineStages');
+        return saved ? JSON.parse(saved) : [
+            { id: 'NEW', label: 'חדש', color: '#6366f1' },
+            { id: 'CONTACT', label: 'יצירת קשר', color: '#3b82f6' },
+            { id: 'MEETING', label: 'פגישה', color: '#8b5cf6' },
+            { id: 'NEGOTIATION', label: 'משא ומתן', color: '#f59e0b' },
+            { id: 'WON', label: 'זכייה', color: '#10b981' },
+            { id: 'LOST', label: 'הפסד', color: '#ef4444' }
+        ];
+    });
+    const [newStageName, setNewStageName] = useState('');
+    const [newStageColor, setNewStageColor] = useState('#6366f1');
+    const [editingStage, setEditingStage] = useState(null);
+
+    const savePipelineStages = (stages) => {
+        setSalesStages(stages);
+        localStorage.setItem('salesPipelineStages', JSON.stringify(stages));
+    };
+
+    const addStage = () => {
+        if (!newStageName.trim()) return;
+        const id = newStageName.toUpperCase().replace(/\s+/g, '_');
+        const newStages = [...salesStages, { id, label: newStageName, color: newStageColor }];
+        savePipelineStages(newStages);
+        setNewStageName('');
+        setNewStageColor('#6366f1');
+    };
+
+    const removeStage = (stageId) => {
+        if (['WON', 'LOST'].includes(stageId)) return; // Can't remove these
+        const newStages = salesStages.filter(s => s.id !== stageId);
+        savePipelineStages(newStages);
+    };
+
+    const updateStage = (stageId, updates) => {
+        const newStages = salesStages.map(s => s.id === stageId ? { ...s, ...updates } : s);
+        savePipelineStages(newStages);
+        setEditingStage(null);
+    };
 
 
     return (
@@ -187,6 +234,120 @@ function SettingsPage({ currentUser }) {
                         </div>
                     </div>
                 </div>
+
+                {/* Sales Pipeline Settings */}
+                {currentUser.role === 'ADMIN' && (
+                    <div className="settings-section glass-card">
+                        <div className="section-header">
+                            <GitBranch size={20} />
+                            <h3>שלבי מכירות (Pipeline)</h3>
+                        </div>
+                        <div className="settings-content">
+                            <p style={{ opacity: 0.7, marginBottom: '16px' }}>
+                                הגדר את השלבים שכל ליד עובר בתהליך המכירה
+                            </p>
+
+                            {/* Current Stages */}
+                            <div className="pipeline-stages-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                                {salesStages.map((stage, index) => (
+                                    <div key={stage.id} className="stage-item" style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '12px',
+                                        padding: '12px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        borderRadius: '8px',
+                                        borderInlineStart: `4px solid ${stage.color}`
+                                    }}>
+                                        <GripVertical size={16} style={{ opacity: 0.4, cursor: 'grab' }} />
+                                        <span className="stage-number" style={{
+                                            width: '24px',
+                                            height: '24px',
+                                            borderRadius: '50%',
+                                            background: stage.color,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold'
+                                        }}>
+                                            {index + 1}
+                                        </span>
+
+                                        {editingStage === stage.id ? (
+                                            <>
+                                                <input
+                                                    type="text"
+                                                    className="input"
+                                                    defaultValue={stage.label}
+                                                    style={{ flex: 1 }}
+                                                    onBlur={(e) => updateStage(stage.id, { label: e.target.value })}
+                                                    autoFocus
+                                                />
+                                                <input
+                                                    type="color"
+                                                    defaultValue={stage.color}
+                                                    onChange={(e) => updateStage(stage.id, { color: e.target.value })}
+                                                    style={{ width: '40px', height: '32px', border: 'none', borderRadius: '4px' }}
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span style={{ flex: 1 }}>{stage.label}</span>
+                                                <button
+                                                    className="icon-btn"
+                                                    onClick={() => setEditingStage(stage.id)}
+                                                    style={{ opacity: 0.6 }}
+                                                >
+                                                    <Edit3 size={14} />
+                                                </button>
+                                            </>
+                                        )}
+
+                                        {!['WON', 'LOST'].includes(stage.id) && (
+                                            <button
+                                                className="icon-btn danger"
+                                                onClick={() => removeStage(stage.id)}
+                                                style={{ opacity: 0.6 }}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Add New Stage */}
+                            <div className="add-stage-form" style={{
+                                display: 'flex',
+                                gap: '8px',
+                                padding: '12px',
+                                background: 'rgba(255,255,255,0.03)',
+                                borderRadius: '8px',
+                                border: '1px dashed rgba(255,255,255,0.2)'
+                            }}>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    placeholder="שם שלב חדש..."
+                                    value={newStageName}
+                                    onChange={(e) => setNewStageName(e.target.value)}
+                                    style={{ flex: 1 }}
+                                />
+                                <input
+                                    type="color"
+                                    value={newStageColor}
+                                    onChange={(e) => setNewStageColor(e.target.value)}
+                                    style={{ width: '40px', height: '40px', border: 'none', borderRadius: '4px' }}
+                                />
+                                <button className="btn btn-primary" onClick={addStage}>
+                                    <Plus size={16} />
+                                    הוסף שלב
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Security */}
                 <div className="settings-section glass-card">
