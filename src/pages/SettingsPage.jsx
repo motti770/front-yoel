@@ -246,6 +246,10 @@ function SettingsPage({ currentUser }) {
                             <p style={{ opacity: 0.7, marginBottom: '16px' }}>
                                 הגדר את השלבים שכל ליד עובר בתהליך המכירה
                             </p>
+                            <p style={{ marginBottom: '16px', padding: '12px', background: 'rgba(102, 126, 234, 0.1)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ opacity: 0.8 }}>💡 לניהול מלא של תהליכי מכירות וייצור, עבור ל</span>
+                                <a href="/workflows" style={{ color: '#667eea', fontWeight: 600 }}>תהליכים</a>
+                            </p>
 
                             {/* Current Stages */}
                             <div className="pipeline-stages-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
