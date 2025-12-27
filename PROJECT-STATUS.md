@@ -1,117 +1,97 @@
 # 📊 סטטוס פרויקט - The Shul CRM
-## עדכון אחרון: 28 בדצמבר 2025
+## עדכון אחרון: 28 בדצמבר 2025, 01:15
 
 ---
 
-## ✅ מה בוצע בסשן האחרון (27-28 דצמבר)
+## ✅ מה הושלם היום (28 דצמבר)
 
-### 1. ניהול Pipeline מכירות
-| פיצ'ר | סטטוס | הערות |
-|-------|--------|-------|
-| טאבים בדף תהליכים (ייצור/מכירות) | ✅ בוצע | דורש deploy |
-| ניהול שלבי מכירות (הוסף/ערוך/מחק) | ✅ בוצע | עובד עם localStorage |
-| SLA לכל שלב (זמן מקסימום) | ✅ בוצע | |
-| התראות חריגה בלידים | ✅ בוצע | אייקון וסיכום |
-| Timeline בכרטיס ליד | ✅ בוצע | מראה מיקום בפייפליין |
+### קבצים חדשים שנוצרו:
+| קובץ | תיאור |
+|------|-------|
+| `src/pages/StockOrders.jsx` | דף ייצור למלאי |
+| `src/pages/StockOrders.css` | עיצוב הדף |
+| `DEVELOPER-GUIDE.md` | **מסמך למפתח Backend** |
+| `PROJECT-STATUS.md` | מסמך סטטוס זה |
 
-### 2. ייצור למלאי (Stock Orders)
-| פיצ'ר | סטטוס | הערות |
-|-------|--------|-------|
-| דף חדש `/stock-orders` | ✅ בוצע | |
-| אייקון בתפריט | ✅ בוצע | |
-| יצירת הזמנת מלאי | ✅ בוצע | עם Mock |
-| הערכת עלות אוטומטית | ✅ בוצע | |
-| מעקב התקדמות | ✅ בוצע | |
+### עדכונים לקבצים קיימים:
 
-### 3. תיקוני באגים
-| באג | סטטוס | הערות |
-|-----|--------|-------|
-| Layers is not defined | ✅ תוקן | |
-| Dropdown RTL positioning | ✅ תוקן | CSS fix |
+| קובץ | שינוי |
+|------|-------|
+| `App.jsx` | הוספת Route ל-Stock Orders + import |
+| `App.css` | תיקון CSS לנוטיפיקציות |
+| `Leads.jsx` | SLA + התראות חריגה + Timeline |
+| `Workflows.jsx` | טאבים (ייצור/מכירות) + ניהול שלבים |
+| `SettingsPage.jsx` | קישור לדף תהליכים |
+| `api.js` | הוספת stockOrdersService + salesPipelineService |
+| `mockData.js` | הוספת Stock Orders לתפריט |
+| `translations.js` | תרגום Stock Orders |
+| `CLIENT-REQUIREMENTS.md` | עדכון סטטוס ל-75% |
 
 ---
 
-## 🔄 מה בפיתוח (נדרש Backend)
+## 📋 רשימת commits שהועלו:
 
-### נדרש מהמפתח Backend:
-
-| פיצ'ר | API נדרש | עדיפות |
-|-------|----------|--------|
-| Pipeline מכירות לפי מוצר | `GET/PUT /products/:id/sales-pipeline` | גבוהה |
-| הזמנות מלאי | `GET/POST /stock-orders` | בינונית |
-| תמחור מוצרים | `GET/PUT /products/:id/pricing` | בינונית |
-
-**📄 מסמך מלא למפתח:** `BACKEND-REQUIREMENTS.md`
-
----
-
-## ❌ מה עדיין לא עובד
-
-### לידים (Leads)
-| בעיה | סיבה | פתרון |
-|------|------|-------|
-| הוספת ליד לא שומרת | חסר Backend API | צריך לבדוק |
-| עדכון שלב לא נשמר | חסר Backend API | צריך לבדוק |
-| המרה ללקוח | ? | צריך לבדוק |
-
-### UI/UX
-| בעיה | סיבה | פתרון |
-|------|------|-------|
-| פעמון לא נפתח נכון | ? | צריך לבדוק בדפדפן |
-| Dropdown יוצא מהמסך | CSS לא מיושם | צריך deploy |
-
----
-
-## 🚀 מה צריך לעשות כדי לראות שינויים
-
-### אפשרות 1: לחבר Vercel ל-`deploy` branch
-1. להיכנס ל-Vercel
-2. Settings > Git > Production Branch
-3. לשנות מ-`main` ל-`deploy`
-
-### אפשרות 2: למזג ל-main
-```bash
-git checkout main
-git merge deploy
-git push origin main
+```
+718b520 Added stockOrdersService and salesPipelineService to api.js
+0d80e97 Fixed StockOrders props, notifications CSS
+fc97b19 Added DEVELOPER-GUIDE.md and updated CLIENT-REQUIREMENTS.md
+9ddca2a Added SLA overdue indicators in Leads page
+718ef3a Added SLA hours to lead stages + overdue detection
+947c451 Added Sales Pipeline tab in Workflows page
+85cf512 Fix: Layers import, Stock Orders page + route
+c1f31f8 Added Pipeline Timeline visualization
+92f0b8c Fix dropdown RTL + Stock Orders menu
+1b571ba Added Backend Requirements document
+4930334 Added Pipeline Management UI in Settings
 ```
 
 ---
 
-## 📋 רשימת עבודה (TODO)
+## � מה עדיין צריך לעשות
 
-### גבוהה
-- [ ] לחבר deploy ל-production (Vercel)
-- [ ] לבדוק למה הלידים לא נשמרים
-- [ ] לבדוק למה הפעמון לא עובד
+### Frontend:
+- [ ] השלמת Orders flow (יצירת הזמנה מלאה)
+- [ ] השלמת Tasks flow (משימות אוטומטיות)
+- [ ] Dashboard מותאם לתפקיד
+- [ ] גרפים ו-Charts
 
-### בינונית
-- [ ] לחבר Stock Orders ל-Backend
-- [ ] לחבר Pipeline Settings ל-Backend
-
-### נמוכה
-- [ ] הוספת Drag & Drop לשינוי סדר שלבים
-- [ ] התראות Push על חריגות SLA
-
----
-
-## 📁 קבצים חדשים שנוצרו
-
-| קובץ | תיאור |
-|------|------|
-| `src/pages/StockOrders.jsx` | דף ייצור למלאי |
-| `src/pages/StockOrders.css` | עיצוב הדף |
-| `BACKEND-REQUIREMENTS.md` | דרישות למפתח Backend |
+### Backend (נדרש מהמפתח):
+- [ ] Leads API (CRUD + convert)
+- [ ] Stock Orders API
+- [ ] Sales Pipeline API
+- [ ] Dashboard Stats API
 
 ---
 
-## 🔀 Git Status
+## 📁 מסמכים חשובים
 
-**Branch פעיל:** `deploy`
-**Commits חדשים:** 10+
-**נדחף ל-GitHub:** ✅ כן
-**Deployed לאתר:** ❌ לא (צריך לחבר)
+### ללקוח:
+- `CLIENT-REQUIREMENTS.md` - דרישות + סטטוס
+
+### למפתח:
+- `DEVELOPER-GUIDE.md` - מדריך מפורט + API specs
+- `BACKEND-REQUIREMENTS.md` - דרישות Backend
 
 ---
 
-*עודכן: 28 בדצמבר 2025, 01:07*
+## � Deploy
+
+**Branch:** `deploy`  
+**Repository:** https://github.com/motti770/front-yoel.git  
+**Status:** ✅ Pushed to GitHub
+
+**⚠️ הערה:** האתר https://the-shul.app.mottidokib.com לא מחובר ל-`deploy` branch.
+צריך לחבר או לעשות merge ל-`main`.
+
+---
+
+## 📞 הבא בתור
+
+1. לחבר את ה-deploy ל-production
+2. לוודא שהלידים נשמרים
+3. להשלים Orders flow
+4. לחבר Backend APIs
+
+---
+
+*עודכן אוטומטית: 28 בדצמבר 2025, 01:15*
