@@ -27,7 +27,8 @@ import {
   ChevronDown,
   User,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Warehouse
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -49,6 +50,7 @@ import LoginPage from './pages/LoginPage';
 import ImportPage from './pages/ImportPage';
 import Leads from './pages/Leads';
 import AssetLibrary from './pages/AssetLibrary';
+import StockOrders from './pages/StockOrders';
 import './App.css';
 
 // Language Context
@@ -76,7 +78,8 @@ const iconMap = {
   Settings,
   Upload,
   Target,
-  FolderOpen
+  FolderOpen,
+  Warehouse
 };
 
 // Protected Route Component
@@ -494,6 +497,11 @@ function AppContent() {
               <Route path="/assets" element={
                 <ProtectedRoute>
                   <AssetLibrary currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
+              <Route path="/stock-orders" element={
+                <ProtectedRoute>
+                  <StockOrders currentUser={currentUser} t={t} language={language} />
                 </ProtectedRoute>
               } />
             </Routes>

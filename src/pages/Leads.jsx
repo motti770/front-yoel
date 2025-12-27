@@ -33,7 +33,8 @@ import {
     Square,
     UserPlus,
     FileSpreadsheet,
-    Sparkles
+    Sparkles,
+    Layers
 } from 'lucide-react';
 import { leadsService, customersService, ordersService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';

@@ -31,16 +31,16 @@ function SettingsPage({ currentUser }) {
         sms: false
     });
 
-    // Pipeline Stages State
+    // Pipeline Stages State with SLA
     const [salesStages, setSalesStages] = useState(() => {
         const saved = localStorage.getItem('salesPipelineStages');
         return saved ? JSON.parse(saved) : [
-            { id: 'NEW', label: 'חדש', color: '#6366f1' },
-            { id: 'CONTACT', label: 'יצירת קשר', color: '#3b82f6' },
-            { id: 'MEETING', label: 'פגישה', color: '#8b5cf6' },
-            { id: 'NEGOTIATION', label: 'משא ומתן', color: '#f59e0b' },
-            { id: 'WON', label: 'זכייה', color: '#10b981' },
-            { id: 'LOST', label: 'הפסד', color: '#ef4444' }
+            { id: 'NEW', label: 'חדש', color: '#6366f1', slaHours: 24 },
+            { id: 'CONTACT', label: 'יצירת קשר', color: '#3b82f6', slaHours: 48 },
+            { id: 'MEETING', label: 'פגישה', color: '#8b5cf6', slaHours: 72 },
+            { id: 'NEGOTIATION', label: 'משא ומתן', color: '#f59e0b', slaHours: 168 },
+            { id: 'WON', label: 'זכייה', color: '#10b981', slaHours: null },
+            { id: 'LOST', label: 'הפסד', color: '#ef4444', slaHours: null }
         ];
     });
     const [newStageName, setNewStageName] = useState('');
@@ -235,8 +235,8 @@ function SettingsPage({ currentUser }) {
                     </div>
                 </div>
 
-                {/* Sales Pipeline Settings */}
-                {currentUser.role === 'ADMIN' && (
+                {/* Sales Pipeline Settings - visible to managers */}
+                {['ADMIN', 'MANAGER'].includes(currentUser.role) && (
                     <div className="settings-section glass-card">
                         <div className="section-header">
                             <GitBranch size={20} />
