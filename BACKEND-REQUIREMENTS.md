@@ -84,7 +84,66 @@ CREATE INDEX idx_leads_assigned ON leads(assigned_to);
 
 ---
 
-## 1. ניהול Pipeline מכירות (לפי מוצר)
+## 1. שלבי מכירות גלובליים (Sales Pipeline) - 🔴 עדיפות גבוהה
+
+### הסבר:
+שלבי מכירה כלליים שחלים על כל הלידים (ברירת מחדל).
+כרגע נשמרים ב-localStorage, צריך להעביר ל-DB.
+
+### Endpoints נדרשים:
+
+```
+GET /sales-pipeline/stages
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "stages": [
+      { "id": "NEW", "label": "חדש", "color": "#667eea", "slaHours": 24, "order": 1 },
+      { "id": "CONTACTED", "label": "יצירת קשר", "color": "#4facfe", "slaHours": 48, "order": 2 },
+      { "id": "QUALIFIED", "label": "מוסמך", "color": "#00f2fe", "slaHours": 72, "order": 3 },
+      { "id": "PROPOSAL", "label": "הצעת מחיר", "color": "#fee140", "slaHours": 96, "order": 4 },
+      { "id": "NEGOTIATION", "label": "משא ומתן", "color": "#f5576c", "slaHours": 168, "order": 5 },
+      { "id": "WON", "label": "זכייה", "color": "#00c853", "slaHours": null, "order": 6 },
+      { "id": "LOST", "label": "הפסד", "color": "#ff5252", "slaHours": null, "order": 7 }
+    ]
+  }
+}
+```
+
+```
+PUT /sales-pipeline/stages
+```
+עדכון כל השלבים (החלפה מלאה)
+
+### מבנה DB מוצע:
+```sql
+CREATE TABLE sales_pipeline_stages (
+  id VARCHAR(50) PRIMARY KEY,
+  label VARCHAR(100) NOT NULL,
+  color VARCHAR(20) DEFAULT '#667eea',
+  sla_hours INTEGER, -- NULL = no SLA
+  stage_order INTEGER NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Insert defaults
+INSERT INTO sales_pipeline_stages (id, label, color, sla_hours, stage_order) VALUES
+  ('NEW', 'חדש', '#667eea', 24, 1),
+  ('CONTACTED', 'יצירת קשר', '#4facfe', 48, 2),
+  ('QUALIFIED', 'מוסמך', '#00f2fe', 72, 3),
+  ('PROPOSAL', 'הצעת מחיר', '#fee140', 96, 4),
+  ('NEGOTIATION', 'משא ומתן', '#f5576c', 168, 5),
+  ('WON', 'זכייה', '#00c853', NULL, 6),
+  ('LOST', 'הפסד', '#ff5252', NULL, 7);
+```
+
+---
+
+## 2. ניהול Pipeline מכירות (לפי מוצר) - אופציונלי
 
 ### הסבר:
 כל מוצר יכול להיות עם תהליך מכירה שונה. למשל:
