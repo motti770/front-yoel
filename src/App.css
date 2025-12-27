@@ -968,3 +968,31 @@
 .header-toggle:hover {
   background: var(--bg-hover);
 }
+
+/* Sidebar Groups */
+.nav-group {
+  margin-bottom: 1.5rem;
+}
+
+.nav-group-title {
+  padding: 0 1rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.75rem auto;
+  width: 40%;
+  opacity: 0.3;
+}
+
+.sidebar.closed .nav-group {
+  margin-bottom: 0.5rem;
+}

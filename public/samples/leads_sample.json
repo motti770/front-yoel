@@ -1,452 +1,452 @@
 [
   {
-    "name": "לאה גולן",
-    "email": "lead1@9963.com",
-    "phone": "053-5738043",
-    "company": "קייטרינג משובח",
-    "status": "NEW",
-    "source": "INSTAGRAM",
-    "estimatedValue": 44249
-  },
-  {
-    "name": "יוסי רוזן",
-    "email": "lead2@4834.com",
-    "phone": "054-2042562",
-    "company": "המרכז לריהוט",
-    "status": "CONTACTED",
-    "source": "COLD_CALL",
-    "estimatedValue": 4600
-  },
-  {
-    "name": "יצחק יוסף",
-    "email": "lead3@2572.com",
-    "phone": "057-6988089",
+    "name": "רחל יוסף",
+    "email": "lead1@6229.com",
+    "phone": "050-3236868",
     "company": "מוסך הצפון",
-    "status": "NEGOTIATION",
-    "source": "WEBSITE",
-    "estimatedValue": 44939
-  },
-  {
-    "name": "שלמה פרץ",
-    "email": "lead4@8032.com",
-    "phone": "055-7987710",
-    "company": "ספא בוטיק",
-    "status": "PROPOSAL",
-    "source": "COLD_CALL",
-    "estimatedValue": 9892
-  },
-  {
-    "name": "דניאל לוי",
-    "email": "lead5@9244.com",
-    "phone": "055-4703438",
-    "company": "טכנולוגיות בע״מ",
-    "status": "QUALIFIED",
-    "source": "INSTAGRAM",
-    "estimatedValue": 36265
-  },
-  {
-    "name": "לאה פרידמן",
-    "email": "lead6@9668.com",
-    "phone": "054-3615676",
-    "company": "מוסך הצפון",
-    "status": "NEW",
-    "source": "LINKEDIN",
-    "estimatedValue": 38427
-  },
-  {
-    "name": "לאה חדד",
-    "email": "lead7@2912.com",
-    "phone": "055-4780396",
-    "company": "ספא בוטיק",
-    "status": "CONTACTED",
-    "source": "LINKEDIN",
-    "estimatedValue": 34381
-  },
-  {
-    "name": "עוז פרידמן",
-    "email": "lead8@3930.com",
-    "phone": "057-1450179",
-    "company": "משרד רואי חשבון",
-    "status": "PROPOSAL",
-    "source": "REFERRAL",
-    "estimatedValue": 20768
-  },
-  {
-    "name": "יעקב פרידמן",
-    "email": "lead9@7520.com",
-    "phone": "059-9933296",
-    "company": "סטודיו לעיצוב",
-    "status": "NEGOTIATION",
-    "source": "INSTAGRAM",
-    "estimatedValue": 35605
-  },
-  {
-    "name": "אברהם כהן",
-    "email": "lead10@1113.com",
-    "phone": "058-7443012",
-    "company": "שירותי ענן",
-    "status": "QUALIFIED",
+    "stage": "NEW",
     "source": "FACEBOOK",
-    "estimatedValue": 29262
+    "estimatedValue": 28624
   },
   {
-    "name": "רחל גבאי",
-    "email": "lead11@2357.com",
-    "phone": "054-3517600",
-    "company": "סטודיו לעיצוב",
-    "status": "CONTACTED",
+    "name": "נועה שפירא",
+    "email": "lead2@8883.com",
+    "phone": "050-2748615",
+    "company": "קייטרינג משובח",
+    "stage": "NEGOTIATION",
     "source": "INSTAGRAM",
-    "estimatedValue": 6009
+    "estimatedValue": 29093
   },
   {
-    "name": "דניאל גבאי",
-    "email": "lead12@1315.com",
-    "phone": "051-8009432",
-    "company": "מוסך הצפון",
-    "status": "NEW",
-    "source": "REFERRAL",
-    "estimatedValue": 30261
-  },
-  {
-    "name": "אברהם מזרחי",
-    "email": "lead13@4728.com",
-    "phone": "057-8146243",
-    "company": "טכנולוגיות בע״מ",
-    "status": "QUALIFIED",
-    "source": "LINKEDIN",
-    "estimatedValue": 39760
-  },
-  {
-    "name": "תמר פרץ",
-    "email": "lead14@7378.com",
-    "phone": "052-5174599",
-    "company": "שירותי ענן",
-    "status": "NEW",
-    "source": "LINKEDIN",
-    "estimatedValue": 38125
-  },
-  {
-    "name": "דוד כהן",
-    "email": "lead15@5047.com",
-    "phone": "054-2939200",
+    "name": "אריאל גולן",
+    "email": "lead3@9472.com",
+    "phone": "055-1894315",
     "company": "עורכי דין שותפים",
-    "status": "CONTACTED",
-    "source": "REFERRAL",
-    "estimatedValue": 11683
-  },
-  {
-    "name": "רבקה כהן",
-    "email": "lead16@2050.com",
-    "phone": "054-9371886",
-    "company": "סטארטאפ ניישן",
-    "status": "CONTACTED",
-    "source": "FACEBOOK",
-    "estimatedValue": 4676
-  },
-  {
-    "name": "יעקב ברק",
-    "email": "lead17@1297.com",
-    "phone": "059-5756947",
-    "company": "נדל״ן ישראל",
-    "status": "NEGOTIATION",
-    "source": "WEBSITE",
-    "estimatedValue": 26481
-  },
-  {
-    "name": "שלמה מלכה",
-    "email": "lead18@2159.com",
-    "phone": "059-8977542",
-    "company": "קייטרינג משובח",
-    "status": "NEW",
-    "source": "WEBSITE",
-    "estimatedValue": 15130
-  },
-  {
-    "name": "טל אברהם",
-    "email": "lead19@4905.com",
-    "phone": "055-9359364",
-    "company": "פתרונות פיננסיים",
-    "status": "CONTACTED",
-    "source": "INSTAGRAM",
-    "estimatedValue": 47361
-  },
-  {
-    "name": "לאה סולומון",
-    "email": "lead20@2773.com",
-    "phone": "053-3824178",
-    "company": "ייבוא ושיווק",
-    "status": "NEGOTIATION",
-    "source": "INSTAGRAM",
-    "estimatedValue": 49464
-  },
-  {
-    "name": "שרה שפירא",
-    "email": "lead21@5525.com",
-    "phone": "056-8269920",
-    "company": "נדל״ן ישראל",
-    "status": "CONTACTED",
-    "source": "REFERRAL",
-    "estimatedValue": 21951
-  },
-  {
-    "name": "שלמה גבאי",
-    "email": "lead22@6310.com",
-    "phone": "051-2520598",
-    "company": "סטודיו לעיצוב",
-    "status": "QUALIFIED",
-    "source": "LINKEDIN",
-    "estimatedValue": 43386
-  },
-  {
-    "name": "רחל כהן",
-    "email": "lead23@7316.com",
-    "phone": "057-4287286",
-    "company": "דפוס דיגיטלי",
-    "status": "CONTACTED",
-    "source": "WEBSITE",
-    "estimatedValue": 15738
-  },
-  {
-    "name": "טל פרידמן",
-    "email": "lead24@6778.com",
-    "phone": "054-5889933",
-    "company": "פתרונות פיננסיים",
-    "status": "QUALIFIED",
-    "source": "REFERRAL",
-    "estimatedValue": 41283
-  },
-  {
-    "name": "יוסי רוזן",
-    "email": "lead25@9644.com",
-    "phone": "055-9563416",
-    "company": "סטארטאפ ניישן",
-    "status": "NEGOTIATION",
-    "source": "LINKEDIN",
-    "estimatedValue": 33995
-  },
-  {
-    "name": "אברהם מזרחי",
-    "email": "lead26@4511.com",
-    "phone": "051-4154210",
-    "company": "סטארטאפ ניישן",
-    "status": "NEGOTIATION",
-    "source": "INSTAGRAM",
-    "estimatedValue": 39742
-  },
-  {
-    "name": "שלמה דהן",
-    "email": "lead27@6571.com",
-    "phone": "055-3617574",
-    "company": "שירותי ענן",
-    "status": "NEW",
-    "source": "WEBSITE",
-    "estimatedValue": 46742
-  },
-  {
-    "name": "שלמה חדד",
-    "email": "lead28@1994.com",
-    "phone": "055-1561952",
-    "company": "דפוס דיגיטלי",
-    "status": "NEGOTIATION",
-    "source": "WEBSITE",
-    "estimatedValue": 8800
-  },
-  {
-    "name": "משה יוסף",
-    "email": "lead29@7092.com",
-    "phone": "050-3010467",
-    "company": "משרד רואי חשבון",
-    "status": "NEW",
-    "source": "FACEBOOK",
-    "estimatedValue": 43908
-  },
-  {
-    "name": "דוד ביטון",
-    "email": "lead30@9117.com",
-    "phone": "059-2452320",
-    "company": "סטארטאפ ניישן",
-    "status": "QUALIFIED",
-    "source": "REFERRAL",
-    "estimatedValue": 15651
-  },
-  {
-    "name": "רחל מלכה",
-    "email": "lead31@4650.com",
-    "phone": "053-8076882",
-    "company": "דפוס דיגיטלי",
-    "status": "NEGOTIATION",
-    "source": "FACEBOOK",
-    "estimatedValue": 1291
-  },
-  {
-    "name": "יוסי רוזן",
-    "email": "lead32@9320.com",
-    "phone": "055-9681663",
-    "company": "משרד רואי חשבון",
-    "status": "QUALIFIED",
-    "source": "INSTAGRAM",
-    "estimatedValue": 43621
-  },
-  {
-    "name": "אריאל כהן",
-    "email": "lead33@7377.com",
-    "phone": "053-4470907",
-    "company": "פתרונות פיננסיים",
-    "status": "QUALIFIED",
+    "stage": "CONTACTED",
     "source": "COLD_CALL",
-    "estimatedValue": 27102
+    "estimatedValue": 17762
   },
   {
-    "name": "מיכל שפירא",
-    "email": "lead34@4523.com",
-    "phone": "051-7832579",
-    "company": "משרד רואי חשבון",
-    "status": "NEGOTIATION",
+    "name": "שרה לוי",
+    "email": "lead4@4453.com",
+    "phone": "057-8613253",
+    "company": "נדל״ן ישראל",
+    "stage": "PROPOSAL",
     "source": "INSTAGRAM",
-    "estimatedValue": 47131
+    "estimatedValue": 46176
   },
   {
-    "name": "משה שמש",
-    "email": "lead35@9087.com",
-    "phone": "052-9317736",
-    "company": "מוסך הצפון",
-    "status": "NEW",
-    "source": "LINKEDIN",
-    "estimatedValue": 3622
+    "name": "חיים גבאי",
+    "email": "lead5@2457.com",
+    "phone": "055-9711630",
+    "company": "המרכז לריהוט",
+    "stage": "CONTACTED",
+    "source": "REFERRAL",
+    "estimatedValue": 7684
   },
   {
-    "name": "שלמה רוזן",
-    "email": "lead36@7380.com",
-    "phone": "052-5212664",
-    "company": "מוסך הצפון",
-    "status": "NEW",
+    "name": "אריאל יוסף",
+    "email": "lead6@2499.com",
+    "phone": "053-9370397",
+    "company": "המרכז לריהוט",
+    "stage": "CONTACTED",
+    "source": "COLD_CALL",
+    "estimatedValue": 49392
+  },
+  {
+    "name": "שרה דהן",
+    "email": "lead7@7955.com",
+    "phone": "057-5069250",
+    "company": "דפוס דיגיטלי",
+    "stage": "CONTACTED",
+    "source": "WEBSITE",
+    "estimatedValue": 29960
+  },
+  {
+    "name": "דוד גבאי",
+    "email": "lead8@9784.com",
+    "phone": "051-7192086",
+    "company": "ייבוא ושיווק",
+    "stage": "QUALIFIED",
+    "source": "FACEBOOK",
+    "estimatedValue": 7252
+  },
+  {
+    "name": "נועה ברק",
+    "email": "lead9@8789.com",
+    "phone": "051-9585180",
+    "company": "נדל״ן ישראל",
+    "stage": "CONTACTED",
+    "source": "INSTAGRAM",
+    "estimatedValue": 38984
+  },
+  {
+    "name": "רחל רוזן",
+    "email": "lead10@9469.com",
+    "phone": "051-9375465",
+    "company": "חנות פרחים",
+    "stage": "PROPOSAL",
+    "source": "WEBSITE",
+    "estimatedValue": 31905
+  },
+  {
+    "name": "עוז שמש",
+    "email": "lead11@9892.com",
+    "phone": "052-5054361",
+    "company": "דפוס דיגיטלי",
+    "stage": "NEGOTIATION",
+    "source": "REFERRAL",
+    "estimatedValue": 26526
+  },
+  {
+    "name": "יוסי ברק",
+    "email": "lead12@2387.com",
+    "phone": "058-8434149",
+    "company": "דפוס דיגיטלי",
+    "stage": "PROPOSAL",
     "source": "LINKEDIN",
-    "estimatedValue": 18889
+    "estimatedValue": 12830
+  },
+  {
+    "name": "טל רוזן",
+    "email": "lead13@7526.com",
+    "phone": "055-9123806",
+    "company": "דפוס דיגיטלי",
+    "stage": "PROPOSAL",
+    "source": "WEBSITE",
+    "estimatedValue": 43294
+  },
+  {
+    "name": "דניאל מזרחי",
+    "email": "lead14@3471.com",
+    "phone": "051-7521315",
+    "company": "פתרונות פיננסיים",
+    "stage": "QUALIFIED",
+    "source": "REFERRAL",
+    "estimatedValue": 23047
+  },
+  {
+    "name": "אריאל שמש",
+    "email": "lead15@4563.com",
+    "phone": "056-4683730",
+    "company": "דפוס דיגיטלי",
+    "stage": "CONTACTED",
+    "source": "INSTAGRAM",
+    "estimatedValue": 44998
+  },
+  {
+    "name": "לאה מלכה",
+    "email": "lead16@2676.com",
+    "phone": "051-1280067",
+    "company": "סטודיו לעיצוב",
+    "stage": "PROPOSAL",
+    "source": "WEBSITE",
+    "estimatedValue": 32205
+  },
+  {
+    "name": "רוני שמש",
+    "email": "lead17@3184.com",
+    "phone": "057-6785353",
+    "company": "שירותי ענן",
+    "stage": "NEW",
+    "source": "FACEBOOK",
+    "estimatedValue": 45782
+  },
+  {
+    "name": "שרה לוי",
+    "email": "lead18@4609.com",
+    "phone": "058-9076342",
+    "company": "מוסך הצפון",
+    "stage": "QUALIFIED",
+    "source": "INSTAGRAM",
+    "estimatedValue": 22853
+  },
+  {
+    "name": "נועה ביטון",
+    "email": "lead19@7764.com",
+    "phone": "057-6612690",
+    "company": "פתרונות פיננסיים",
+    "stage": "NEW",
+    "source": "COLD_CALL",
+    "estimatedValue": 36050
+  },
+  {
+    "name": "דניאל דהן",
+    "email": "lead20@3446.com",
+    "phone": "054-1349232",
+    "company": "סטארטאפ ניישן",
+    "stage": "NEGOTIATION",
+    "source": "REFERRAL",
+    "estimatedValue": 37029
+  },
+  {
+    "name": "דניאל ברק",
+    "email": "lead21@6146.com",
+    "phone": "051-7494367",
+    "company": "טכנולוגיות בע״מ",
+    "stage": "PROPOSAL",
+    "source": "FACEBOOK",
+    "estimatedValue": 14775
+  },
+  {
+    "name": "מיכל גבאי",
+    "email": "lead22@1345.com",
+    "phone": "058-4275679",
+    "company": "סטארטאפ ניישן",
+    "stage": "NEGOTIATION",
+    "source": "FACEBOOK",
+    "estimatedValue": 36114
+  },
+  {
+    "name": "משה ביטון",
+    "email": "lead23@7641.com",
+    "phone": "058-4331832",
+    "company": "המרכז לריהוט",
+    "stage": "QUALIFIED",
+    "source": "REFERRAL",
+    "estimatedValue": 44643
+  },
+  {
+    "name": "אברהם דהן",
+    "email": "lead24@9819.com",
+    "phone": "056-1897649",
+    "company": "קייטרינג משובח",
+    "stage": "NEW",
+    "source": "INSTAGRAM",
+    "estimatedValue": 46667
+  },
+  {
+    "name": "רבקה מזרחי",
+    "email": "lead25@5982.com",
+    "phone": "052-9229453",
+    "company": "דפוס דיגיטלי",
+    "stage": "PROPOSAL",
+    "source": "LINKEDIN",
+    "estimatedValue": 43878
   },
   {
     "name": "אברהם פרץ",
-    "email": "lead37@3812.com",
-    "phone": "057-2258728",
-    "company": "ספא בוטיק",
-    "status": "QUALIFIED",
-    "source": "LINKEDIN",
-    "estimatedValue": 38388
-  },
-  {
-    "name": "אריאל דהן",
-    "email": "lead38@6218.com",
-    "phone": "053-6966206",
-    "company": "שירותי ענן",
-    "status": "QUALIFIED",
-    "source": "WEBSITE",
-    "estimatedValue": 13094
-  },
-  {
-    "name": "מיכל אברהם",
-    "email": "lead39@2868.com",
-    "phone": "057-4573081",
+    "email": "lead26@7111.com",
+    "phone": "055-9478271",
     "company": "סטודיו לעיצוב",
-    "status": "QUALIFIED",
-    "source": "INSTAGRAM",
-    "estimatedValue": 29328
+    "stage": "PROPOSAL",
+    "source": "LINKEDIN",
+    "estimatedValue": 3354
   },
   {
-    "name": "דניאל חדד",
-    "email": "lead40@7061.com",
-    "phone": "051-3276421",
-    "company": "ייבוא ושיווק",
-    "status": "PROPOSAL",
+    "name": "אריאל רוזן",
+    "email": "lead27@7348.com",
+    "phone": "050-1198657",
+    "company": "מוסך הצפון",
+    "stage": "QUALIFIED",
+    "source": "LINKEDIN",
+    "estimatedValue": 10949
+  },
+  {
+    "name": "אריאל לוי",
+    "email": "lead28@8689.com",
+    "phone": "056-4338197",
+    "company": "שירותי ענן",
+    "stage": "NEGOTIATION",
+    "source": "REFERRAL",
+    "estimatedValue": 17450
+  },
+  {
+    "name": "רבקה גולן",
+    "email": "lead29@8192.com",
+    "phone": "057-9861370",
+    "company": "המרכז לריהוט",
+    "stage": "QUALIFIED",
+    "source": "LINKEDIN",
+    "estimatedValue": 2958
+  },
+  {
+    "name": "יעקב שמש",
+    "email": "lead30@3831.com",
+    "phone": "050-3140560",
+    "company": "סטודיו לעיצוב",
+    "stage": "CONTACTED",
+    "source": "WEBSITE",
+    "estimatedValue": 49554
+  },
+  {
+    "name": "רוני דהן",
+    "email": "lead31@7219.com",
+    "phone": "053-4185480",
+    "company": "פתרונות פיננסיים",
+    "stage": "PROPOSAL",
+    "source": "LINKEDIN",
+    "estimatedValue": 43204
+  },
+  {
+    "name": "חיים לב",
+    "email": "lead32@9675.com",
+    "phone": "059-2484300",
+    "company": "נדל״ן ישראל",
+    "stage": "QUALIFIED",
+    "source": "COLD_CALL",
+    "estimatedValue": 46118
+  },
+  {
+    "name": "מיכל סולומון",
+    "email": "lead33@3601.com",
+    "phone": "059-3594621",
+    "company": "סטארטאפ ניישן",
+    "stage": "NEGOTIATION",
     "source": "FACEBOOK",
-    "estimatedValue": 41035
+    "estimatedValue": 38179
   },
   {
     "name": "תמר סולומון",
-    "email": "lead41@8022.com",
-    "phone": "052-6411027",
-    "company": "חנות פרחים",
-    "status": "QUALIFIED",
+    "email": "lead34@9681.com",
+    "phone": "052-3896990",
+    "company": "נדל״ן ישראל",
+    "stage": "NEW",
     "source": "COLD_CALL",
-    "estimatedValue": 2908
+    "estimatedValue": 31805
   },
   {
-    "name": "יעקב פרץ",
-    "email": "lead42@1889.com",
-    "phone": "055-4102983",
-    "company": "חנות פרחים",
-    "status": "CONTACTED",
-    "source": "COLD_CALL",
-    "estimatedValue": 10397
-  },
-  {
-    "name": "משה שפירא",
-    "email": "lead43@2283.com",
-    "phone": "053-8022575",
-    "company": "דפוס דיגיטלי",
-    "status": "QUALIFIED",
-    "source": "WEBSITE",
-    "estimatedValue": 22593
-  },
-  {
-    "name": "דניאל אזולאי",
-    "email": "lead44@1353.com",
-    "phone": "059-1172265",
-    "company": "משרד רואי חשבון",
-    "status": "CONTACTED",
-    "source": "INSTAGRAM",
-    "estimatedValue": 30690
-  },
-  {
-    "name": "אברהם אזולאי",
-    "email": "lead45@9908.com",
-    "phone": "058-8133702",
+    "name": "רבקה ברק",
+    "email": "lead35@6314.com",
+    "phone": "058-4353219",
     "company": "סטודיו לעיצוב",
-    "status": "QUALIFIED",
-    "source": "LINKEDIN",
-    "estimatedValue": 11458
-  },
-  {
-    "name": "רוני גולן",
-    "email": "lead46@9887.com",
-    "phone": "056-8918110",
-    "company": "קייטרינג משובח",
-    "status": "NEW",
+    "stage": "QUALIFIED",
     "source": "INSTAGRAM",
-    "estimatedValue": 21907
+    "estimatedValue": 36866
   },
   {
-    "name": "דוד רוזן",
-    "email": "lead47@4337.com",
-    "phone": "052-3152079",
-    "company": "פתרונות פיננסיים",
-    "status": "QUALIFIED",
+    "name": "רוני ברק",
+    "email": "lead36@8936.com",
+    "phone": "057-2071042",
+    "company": "ייבוא ושיווק",
+    "stage": "CONTACTED",
+    "source": "COLD_CALL",
+    "estimatedValue": 31475
+  },
+  {
+    "name": "אריאל כהן",
+    "email": "lead37@4174.com",
+    "phone": "059-7714411",
+    "company": "נדל״ן ישראל",
+    "stage": "QUALIFIED",
     "source": "LINKEDIN",
-    "estimatedValue": 13158
+    "estimatedValue": 4449
   },
   {
-    "name": "תמר ביטון",
-    "email": "lead48@1550.com",
-    "phone": "055-2973756",
-    "company": "שירותי ענן",
-    "status": "NEW",
-    "source": "INSTAGRAM",
-    "estimatedValue": 42719
-  },
-  {
-    "name": "לאה אברהם",
-    "email": "lead49@3950.com",
-    "phone": "054-1189807",
-    "company": "ספא בוטיק",
-    "status": "NEGOTIATION",
-    "source": "LINKEDIN",
-    "estimatedValue": 30260
-  },
-  {
-    "name": "משה כהן",
-    "email": "lead50@4426.com",
-    "phone": "057-8429668",
-    "company": "פתרונות פיננסיים",
-    "status": "PROPOSAL",
+    "name": "רחל סולומון",
+    "email": "lead38@2109.com",
+    "phone": "050-3320183",
+    "company": "המרכז לריהוט",
+    "stage": "NEGOTIATION",
     "source": "WEBSITE",
-    "estimatedValue": 8005
+    "estimatedValue": 49103
+  },
+  {
+    "name": "יעקב רוזן",
+    "email": "lead39@4555.com",
+    "phone": "057-6952607",
+    "company": "חנות פרחים",
+    "stage": "CONTACTED",
+    "source": "COLD_CALL",
+    "estimatedValue": 8269
+  },
+  {
+    "name": "שרה רוזן",
+    "email": "lead40@2181.com",
+    "phone": "057-9557233",
+    "company": "דפוס דיגיטלי",
+    "stage": "PROPOSAL",
+    "source": "COLD_CALL",
+    "estimatedValue": 43612
+  },
+  {
+    "name": "נועה מלכה",
+    "email": "lead41@7152.com",
+    "phone": "053-5051369",
+    "company": "ספא בוטיק",
+    "stage": "QUALIFIED",
+    "source": "LINKEDIN",
+    "estimatedValue": 23798
+  },
+  {
+    "name": "עוז ביטון",
+    "email": "lead42@7362.com",
+    "phone": "053-2063753",
+    "company": "ייבוא ושיווק",
+    "stage": "NEW",
+    "source": "LINKEDIN",
+    "estimatedValue": 8122
+  },
+  {
+    "name": "חיים ברק",
+    "email": "lead43@3673.com",
+    "phone": "057-4135880",
+    "company": "סטודיו לעיצוב",
+    "stage": "NEGOTIATION",
+    "source": "LINKEDIN",
+    "estimatedValue": 26311
+  },
+  {
+    "name": "לאה סולומון",
+    "email": "lead44@1780.com",
+    "phone": "055-6409488",
+    "company": "נדל״ן ישראל",
+    "stage": "CONTACTED",
+    "source": "INSTAGRAM",
+    "estimatedValue": 15113
+  },
+  {
+    "name": "אברהם פרידמן",
+    "email": "lead45@7957.com",
+    "phone": "051-1795102",
+    "company": "משרד רואי חשבון",
+    "stage": "CONTACTED",
+    "source": "REFERRAL",
+    "estimatedValue": 49135
+  },
+  {
+    "name": "יעקב סולומון",
+    "email": "lead46@3529.com",
+    "phone": "052-5243482",
+    "company": "עורכי דין שותפים",
+    "stage": "PROPOSAL",
+    "source": "WEBSITE",
+    "estimatedValue": 31567
+  },
+  {
+    "name": "רוני אברהם",
+    "email": "lead47@7800.com",
+    "phone": "052-7108728",
+    "company": "סטארטאפ ניישן",
+    "stage": "NEGOTIATION",
+    "source": "INSTAGRAM",
+    "estimatedValue": 20851
+  },
+  {
+    "name": "רבקה אזולאי",
+    "email": "lead48@7040.com",
+    "phone": "053-5313284",
+    "company": "קייטרינג משובח",
+    "stage": "NEW",
+    "source": "LINKEDIN",
+    "estimatedValue": 35198
+  },
+  {
+    "name": "לאה שפירא",
+    "email": "lead49@1664.com",
+    "phone": "053-7729940",
+    "company": "דפוס דיגיטלי",
+    "stage": "NEGOTIATION",
+    "source": "REFERRAL",
+    "estimatedValue": 36562
+  },
+  {
+    "name": "אריאל אברהם",
+    "email": "lead50@4414.com",
+    "phone": "051-7087503",
+    "company": "טכנולוגיות בע״מ",
+    "stage": "NEW",
+    "source": "INSTAGRAM",
+    "estimatedValue": 40970
   }
 ]

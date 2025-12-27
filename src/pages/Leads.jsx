@@ -220,6 +220,56 @@ function Leads({ currentUser, t, language }) {
         }
     };
 
+    // Deduplication Logic
+    const [showDedupeModal, setShowDedupeModal] = useState(false);
+    const [duplicates, setDuplicates] = useState([]);
+
+    const scanForDuplicates = () => {
+        const groups = {};
+        leads.forEach(lead => {
+            if (!lead.email) return;
+            const key = lead.email.toLowerCase();
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(lead);
+        });
+        const dups = Object.values(groups).filter(g => g.length > 1);
+        setDuplicates(dups);
+        setShowDedupeModal(true);
+    };
+
+    const handleMergeDuplicates = () => {
+        let newLeadsList = [...leads];
+        let mergedCount = 0;
+
+        duplicates.forEach(group => {
+            // Sort by createdAt descending (newest first)
+            const sorted = group.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+            // Master is the newest one
+            const master = { ...sorted[0] };
+
+            // Fill missing fields from older versions
+            sorted.slice(1).forEach(older => {
+                Object.keys(older).forEach(key => {
+                    // If master field is empty but older has value, take it
+                    if ((master[key] === undefined || master[key] === null || master[key] === '') && older[key]) {
+                        master[key] = older[key];
+                    }
+                });
+                // Remove older from list
+                newLeadsList = newLeadsList.filter(l => l.id !== older.id);
+            });
+
+            // Update master in list
+            const masterIndex = newLeadsList.findIndex(l => l.id === master.id);
+            if (masterIndex >= 0) newLeadsList[masterIndex] = master;
+            mergedCount++;
+        });
+
+        setLeads(newLeadsList);
+        setShowDedupeModal(false);
+        showToast(language === 'he' ? `מוזגו ${mergedCount} כפילויות` : `Merged ${mergedCount} duplicate groups`);
+    };
+
     const handleDelete = async () => {
         try {
             setSaving(true);
@@ -275,20 +325,13 @@ function Leads({ currentUser, t, language }) {
             }
 
             // Fallback: create customer manually
-            // Split name into first and last
-            const nameParts = (selectedLead.name || '').trim().split(' ');
-            const firstName = nameParts[0] || '';
-            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
             const customerData = {
-                firstName: firstName,
-                lastName: lastName,
+                name: selectedLead.name,
                 email: selectedLead.email,
                 phone: selectedLead.phone,
-                company: selectedLead.company,
+                companyName: selectedLead.company,
                 notes: selectedLead.notes,
-                status: 'ACTIVE',
-                source: selectedLead.source
+                status: 'ACTIVE'
             };
 
             console.log('[Leads] Creating customer with data:', customerData);
@@ -584,6 +627,10 @@ function Leads({ currentUser, t, language }) {
                 </div>
 
                 <div className="header-actions">
+                    <button className="btn btn-outline" onClick={scanForDuplicates} title={language === 'he' ? 'סרוק כפילויות' : 'Scan Duplicates'}>
+                        <Users size={18} />
+                        {language === 'he' ? 'ניקוי כפולים' : 'Cleanup'}
+                    </button>
                     <button className="btn btn-outline" onClick={() => setShowImportModal(true)}>
                         <Upload size={18} />
                         {language === 'he' ? 'ייבוא' : 'Import'}
@@ -880,6 +927,63 @@ function Leads({ currentUser, t, language }) {
                 </div>
             </Modal>
 
+            {/* Deduplication Modal */}
+            <Modal
+                isOpen={showDedupeModal}
+                onClose={() => setShowDedupeModal(false)}
+                title={language === 'he' ? 'ניהול כפילויות' : 'Manage Duplicates'}
+                size="large"
+            >
+                <div className="dedupe-container" style={{ padding: '20px' }}>
+                    {duplicates.length === 0 ? (
+                        <div className="empty-state" style={{ textAlign: 'center', padding: '40px' }}>
+                            <h3>{language === 'he' ? 'לא נמצאו כפילויות!' : 'No duplicates found!'}</h3>
+                            <p className="text-muted">{language === 'he' ? 'הנתונים שלך נקיים.' : 'Your data is clean.'}</p>
+                            <button className="btn btn-primary mt-4" onClick={() => setShowDedupeModal(false)}>{t('close')}</button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="dedupe-summary" style={{ marginBottom: '20px', padding: '15px', background: 'rgba(255, 193, 7, 0.1)', borderRadius: '8px', border: '1px solid rgba(255, 193, 7, 0.3)' }}>
+                                <strong>
+                                    {language === 'he'
+                                        ? `נמצאו ${duplicates.length} קבוצות של כפילויות.`
+                                        : `Found ${duplicates.length} duplicate groups.`
+                                    }
+                                </strong>
+                                <p style={{ fontSize: '0.9em', margin: '5px 0 0' }}>
+                                    {language === 'he' ? 'לחיצה על "מזג הכל" תשאיר את הרשומה העדכנית ביותר ותשלים מידע חסר מרשומות ישנות.' : 'Clicking "Merge All" will keep the latest record and fill missing info from older ones.'}
+                                </p>
+                            </div>
+
+                            <div className="dedupe-list" style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '20px' }}>
+                                {duplicates.map((group, idx) => (
+                                    <div key={idx} className="dedupe-group" style={{ marginBottom: '10px', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                                        <div className="group-header" style={{ fontWeight: 'bold', marginBottom: '8px', display: 'flex', justifyContent: 'space-between' }}>
+                                            <span>{group[0].email}</span>
+                                            <span className="badge badge-warning">{group.length}</span>
+                                        </div>
+                                        {group.map(lead => (
+                                            <div key={lead.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginLeft: '10px', padding: '4px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                {lead.name} • {lead.company || '-'} • {new Date(lead.createdAt || 0).toLocaleDateString()} • {lead.stage}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="modal-actions">
+                                <button className="btn btn-outline" onClick={() => setShowDedupeModal(false)}>
+                                    {t('close')}
+                                </button>
+                                <button className="btn btn-primary" onClick={handleMergeDuplicates}>
+                                    {language === 'he' ? 'מזג ושמור' : 'Merge & Save'}
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </Modal>
+
             {/* Import Modal */}
             <Modal
                 isOpen={showImportModal}
@@ -895,19 +999,57 @@ function Leads({ currentUser, t, language }) {
                         { key: 'email', label: language === 'he' ? 'אימייל' : 'Email', type: 'email', required: true },
                         { key: 'phone', label: language === 'he' ? 'טלפון' : 'Phone', type: 'tel', required: false },
                         { key: 'company', label: language === 'he' ? 'חברה' : 'Company', type: 'text', required: false },
+                        {
+                            key: 'stage',
+                            label: language === 'he' ? 'שלב' : 'Stage',
+                            type: 'select',
+                            required: false,
+                            options: Object.keys(LEAD_STAGES).map(k => ({ value: k, label: LEAD_STAGES[k].label[language] }))
+                        },
                         { key: 'source', label: language === 'he' ? 'מקור' : 'Source', type: 'select', required: false },
                         { key: 'estimatedValue', label: language === 'he' ? 'ערך משוער' : 'Est. Value', type: 'number', required: false }
                     ]}
                     onImport={async (data) => {
-                        // Add to local state for demo
-                        const newLead = {
-                            id: `lead-${Date.now()}`,
-                            ...data,
-                            stage: 'NEW',
-                            createdAt: new Date().toISOString().split('T')[0]
-                        };
-                        setLeads(prev => [newLead, ...prev]);
-                        return newLead;
+                        // Simulate API call delay
+                        await new Promise(resolve => setTimeout(resolve, 50));
+
+                        let resultLead = null;
+
+                        setLeads(prevLeads => {
+                            // Find duplicate by email
+                            const existingIndex = prevLeads.findIndex(l =>
+                                (l.email && data.email && l.email.toLowerCase() === data.email.toLowerCase())
+                            );
+
+                            if (existingIndex >= 0) {
+                                // Update existing lead
+                                const updatedLeads = [...prevLeads];
+                                const existingLead = updatedLeads[existingIndex];
+                                updatedLeads[existingIndex] = {
+                                    ...existingLead,
+                                    ...data,
+                                    // Preserve critical fields if not in data
+                                    id: existingLead.id,
+                                    stage: existingLead.stage,
+                                    createdAt: existingLead.createdAt
+                                };
+                                resultLead = updatedLeads[existingIndex];
+                                return updatedLeads;
+                            } else {
+                                // Create new lead
+                                const newLead = {
+                                    id: `lead-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                                    stage: 'NEW',
+                                    createdAt: new Date().toISOString().split('T')[0],
+                                    source: 'IMPORT',
+                                    ...data
+                                };
+                                resultLead = newLead;
+                                return [newLead, ...prevLeads];
+                            }
+                        });
+
+                        return resultLead;
                     }}
                     language={language}
                     onClose={() => {

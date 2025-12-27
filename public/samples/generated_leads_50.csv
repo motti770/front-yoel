@@ -1,0 +1,51 @@
+name,email,phone,company,status,source,estimatedValue
+יוסף לרנר,lead1@7995.com,050-260373,גינון ונוף,NEGOTIATION,LINKEDIN,25012
+אסתר דהן,lead2@3754.com,055-517900,פתרונות פיננסיים,PROPOSAL,COLD_CALL,39118
+יעל גולן,lead3@7348.com,051-799302,קייטרינג משובח,PROPOSAL,WEBSITE,13655
+חנה נחום,lead4@6955.com,053-045130,אבטחת מידע,CONTACTED,REFERRAL,35049
+בת שבע אברהם,lead5@1108.com,055-116753,חומרי בניין,PROPOSAL,COLD_CALL,39535
+אסתר לוי,lead6@8373.com,050-715348,בגדי מעצבים,PROPOSAL,COLD_CALL,14590
+גד בוזגלו,lead7@6039.com,056-478967,אבטחת מידע,QUALIFIED,COLD_CALL,21574
+דוד אוחיון,lead8@677.com,055-099348,פתרונות פיננסיים,QUALIFIED,GOOGLE,49506
+רוני אמסלם,lead9@8408.com,050-520389,חברת ביטוח,NEGOTIATION,INSTAGRAM,1916
+שולמית סולומון,lead10@2801.com,053-878602,סוכנות נסיעות,CONTACTED,COLD_CALL,10306
+אהרון קדוש,lead11@8129.com,059-516831,חנות פרחים,QUALIFIED,GOOGLE,20816
+יוסי בוזגלו,lead12@6417.com,051-405727,מספרת העיר,CONTACTED,INSTAGRAM,49858
+בנימין הלוי,lead13@245.com,054-483254,אדריכלים ומעצבים,QUALIFIED,REFERRAL,50806
+דינה אברהם,lead14@9438.com,057-205415,מעבדה ממוחשבת,QUALIFIED,INSTAGRAM,8633
+בת שבע יוסף,lead15@5025.com,056-928951,מסעדת היוקרה,NEGOTIATION,GOOGLE,34728
+אביגיל חדד,lead16@5647.com,050-208795,הלוואות ומשכנתאות,QUALIFIED,GOOGLE,16964
+נועה דהן,lead17@992.com,051-597587,תיקון סלולר,QUALIFIED,LINKEDIN,47403
+איתי נחום,lead18@6732.com,054-259840,מספרת העיר,NEW,FACEBOOK,39431
+רוני דהן,lead19@2438.com,057-045705,טכנולוגיות בע״מ,QUALIFIED,FACEBOOK,10231
+טליה עמר,lead20@265.com,052-649976,סטארטאפ ניישן,NEGOTIATION,LINKEDIN,15866
+מיכל מלכה,lead21@1182.com,052-054806,ספא בוטיק,NEGOTIATION,FACEBOOK,21322
+יצחק אוחיון,lead22@1838.com,056-093317,גן ילדים,QUALIFIED,LINKEDIN,14337
+אריאל ששון,lead23@8915.com,052-268520,משרד רואי חשבון,QUALIFIED,LINKEDIN,20192
+אברהם שפירא,lead24@937.com,054-368867,ייבוא ושיווק,NEW,REFERRAL,32609
+מרים לרנר,lead25@4624.com,050-512029,שיווק דיגיטלי,NEGOTIATION,GOOGLE,44639
+זבולון גבאי,lead26@1392.com,050-110790,בית אבות,QUALIFIED,COLD_CALL,25028
+שלמה גולן,lead27@6764.com,057-221001,נוטריון ציבורי,PROPOSAL,FACEBOOK,7288
+נועם מלכה,lead28@9477.com,054-121190,סטארטאפ ניישן,PROPOSAL,REFERRAL,12132
+אהרון סגל,lead29@4382.com,055-759164,ייבוא ושיווק,PROPOSAL,WEBSITE,43567
+גיא אלבז,lead30@8279.com,052-339310,עורכי דין שותפים,NEW,WEBSITE,44719
+מיכאל דהן,lead31@368.com,052-710297,חנות תכשיטים,PROPOSAL,FACEBOOK,30376
+רוני ברק,lead32@648.com,059-824860,פתרונות פיננסיים,NEGOTIATION,WEBSITE,27940
+יעל מוסקוביץ,lead33@1392.com,050-627854,משרד רואי חשבון,NEGOTIATION,FACEBOOK,11066
+רות בר,lead34@9416.com,057-998224,מוסך הצפון,NEGOTIATION,GOOGLE,18493
+רבקה לנדאו,lead35@5442.com,052-520250,סטודיו לעיצוב,CONTACTED,REFERRAL,34033
+פנינה אשכנזי,lead36@3797.com,054-731147,המרכז לריהוט,PROPOSAL,GOOGLE,12661
+אורי פרץ,lead37@9093.com,059-929211,אבטחת מידע,CONTACTED,REFERRAL,26542
+יהודה רוזן,lead38@1132.com,054-318347,מסעדת היוקרה,PROPOSAL,REFERRAL,3234
+חנה אזולאי,lead39@5680.com,052-760671,מרכז למידה,QUALIFIED,COLD_CALL,31880
+נועה גבאי,lead40@4509.com,054-273349,סוכנות נסיעות,CONTACTED,LINKEDIN,18851
+דניאל שפירא,lead41@3567.com,054-178266,ציוד משרדי,NEW,GOOGLE,17602
+טליה עמר,lead42@6865.com,056-276645,המרכז לריהוט,CONTACTED,GOOGLE,39564
+משה בר,lead43@3827.com,051-173747,מעבדה ממוחשבת,NEW,GOOGLE,15007
+רוני וייס,lead44@7459.com,053-697849,גן ילדים,NEGOTIATION,LINKEDIN,10290
+טליה לוי,lead45@9516.com,059-417871,תיקון סלולר,CONTACTED,FACEBOOK,8958
+יוסף בר,lead46@233.com,052-239793,חומרי בניין,CONTACTED,GOOGLE,17141
+מיכל מזרחי,lead47@8688.com,056-358242,בגדי מעצבים,QUALIFIED,FACEBOOK,23049
+נועה כהן,lead48@4706.com,053-611377,דפוס דיגיטלי,QUALIFIED,GOOGLE,21913
+אהרון בוזגלו,lead49@4998.com,056-025200,קייטרינג משובח,QUALIFIED,GOOGLE,20089
+מיכאל קדוש,lead50@986.com,056-398803,אדריכלים ומעצבים,CONTACTED,REFERRAL,17996

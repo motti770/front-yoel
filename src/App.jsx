@@ -123,6 +123,21 @@ function AppContent() {
   // Get navigation items based on current user's role
   const navItems = isAuthenticated ? getNavItemsForRole(user?.role || 'EMPLOYEE') : [];
 
+  // Group nav items
+  const groupedNavItems = isAuthenticated ? (() => {
+    const categories = ['crm', 'production', 'inventory', 'management'];
+    const groups = categories.reduce((acc, cat) => {
+      const items = navItems.filter(item => item.category === cat);
+      if (items.length > 0) acc[cat] = items;
+      return acc;
+    }, {});
+
+    const other = navItems.filter(item => !item.category);
+    if (other.length > 0) groups['other'] = other;
+
+    return groups;
+  })() : {};
+
   // Role colors
   const roleColors = {
     ADMIN: '#667eea',
@@ -157,20 +172,35 @@ function AppContent() {
           </div>
 
           <nav className="sidebar-nav">
-            {navItems.map((item) => {
-              const Icon = iconMap[item.icon];
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`nav-item ${isActive ? 'active' : ''}`}
-                >
-                  {Icon && <Icon size={20} />}
-                  {sidebarOpen && <span>{t(item.labelKey)}</span>}
-                </Link>
-              );
-            })}
+            {Object.entries(groupedNavItems).map(([category, items]) => (
+              <div key={category} className="nav-group">
+                {sidebarOpen && category !== 'other' && (
+                  <div className="nav-group-title">
+                    {category === 'crm' && (language === 'he' ? 'מכירות ולקוחות' : 'Sales & CRM')}
+                    {category === 'production' && (language === 'he' ? 'ייצור ותפעול' : 'Production')}
+                    {category === 'inventory' && (language === 'he' ? 'מלאי' : 'Inventory')}
+                    {category === 'management' && (language === 'he' ? 'ניהול' : 'Management')}
+                  </div>
+                )}
+                {!sidebarOpen && <div className="nav-divider" />}
+
+                {items.map((item) => {
+                  const Icon = iconMap[item.icon];
+                  const isActive = location.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.path}
+                      to={item.path}
+                      className={`nav-item ${isActive ? 'active' : ''}`}
+                      title={!sidebarOpen ? t(item.labelKey) : ''}
+                    >
+                      {Icon && <Icon size={20} />}
+                      {sidebarOpen && <span>{t(item.labelKey)}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
           <button
