@@ -396,6 +396,7 @@ translations.en = {
     departments: 'Departments',
     parameters: 'Parameters',
     assets: 'Asset Library',
+    stockOrders: 'Stock Production',
     import: 'Import',
     calendar: 'Calendar',
     analytics: 'Analytics',
