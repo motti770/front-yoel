@@ -862,17 +862,44 @@
   color: #64748b;
 }
 
-/* Mobile Sidebar Width & Overlay Fix */
+/* Mobile Sidebar Improved Fix */
 @media (max-width: 768px) {
   .sidebar {
+    position: fixed !important;
+    top: 0;
+    bottom: 0;
     width: 280px !important;
-    /* Force simpler width */
-    max-width: 80vw;
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
-    /* Stronger shadow */
+    max-width: 85vw;
+    z-index: 2000 !important;
+    /* Above overlay (999) and everything else */
+    transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
   }
 
+  /* RTL: Start from right, hidden off-screen to the right */
   [dir="rtl"] .sidebar {
-    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    right: 0;
+    left: auto;
+    transform: translateX(100%);
+  }
+
+  /* LTR: Start from left, hidden off-screen to the left */
+  [dir="ltr"] .sidebar {
+    left: 0;
+    right: auto;
+    transform: translateX(-100%);
+  }
+
+  /* When OPEN, reset transform to 0 (visible) */
+  .sidebar.open,
+  [dir="rtl"] .sidebar.open,
+  [dir="ltr"] .sidebar.open {
+    transform: translateX(0) !important;
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    /* Deep shadow */
+  }
+
+  /* Ensure overlay is below sidebar */
+  .sidebar-overlay {
+    z-index: 1500 !important;
   }
 }

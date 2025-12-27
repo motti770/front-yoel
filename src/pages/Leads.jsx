@@ -29,6 +29,7 @@ import {
     MoreHorizontal
 } from 'lucide-react';
 import { leadsService, customersService } from '../services/api';
+import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
 import './Leads.css';
@@ -62,7 +63,7 @@ function Leads({ currentUser, t, language }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [stageFilter, setStageFilter] = useState('all');
     const [sourceFilter, setSourceFilter] = useState('all');
-    const [currentView, setCurrentView] = useState('pipeline'); // pipeline, table, list
+    const [currentView, setCurrentView] = useState(VIEW_TYPES.PIPELINE);
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -437,6 +438,107 @@ function Leads({ currentUser, t, language }) {
         );
     }
 
+    // TABLE VIEW
+    const renderTableView = () => (
+        <div className="table-container glass-card">
+            <table className="data-table">
+                <thead>
+                    <tr>
+                        <th>{language === 'he' ? 'שם' : 'Name'}</th>
+                        <th>{language === 'he' ? 'חברה' : 'Company'}</th>
+                        <th>{language === 'he' ? 'סטטוס' : 'Status'}</th>
+                        <th>{language === 'he' ? 'ערך' : 'Value'}</th>
+                        <th>{language === 'he' ? 'מקור' : 'Source'}</th>
+                        <th>{language === 'he' ? 'פעולות' : 'Actions'}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredLeads.map((lead) => (
+                        <tr key={lead.id}>
+                            <td>
+                                <div className="customer-name-cell">
+                                    <div className="customer-avatar">
+                                        <User size={16} />
+                                    </div>
+                                    <span>{lead.name}</span>
+                                </div>
+                            </td>
+                            <td>{lead.company || '-'}</td>
+                            <td>
+                                <span className="status-badge" style={{
+                                    background: `${LEAD_STAGES[lead.stage]?.color}20`,
+                                    color: LEAD_STAGES[lead.stage]?.color
+                                }}>
+                                    {LEAD_STAGES[lead.stage]?.label[language] || lead.stage}
+                                </span>
+                            </td>
+                            <td>₪{(lead.estimatedValue || 0).toLocaleString()}</td>
+                            <td>{LEAD_SOURCES[lead.source]?.label[language]}</td>
+                            <td>
+                                <div className="action-buttons">
+                                    <button className="action-btn" onClick={() => handleView(lead)}><Eye size={14} /></button>
+                                    <button className="action-btn" onClick={() => handleEdit(lead)}><Edit size={14} /></button>
+                                </div>
+                            </td>
+                        </tr>
+                    ))}
+                    {filteredLeads.length === 0 && (
+                        <tr>
+                            <td colSpan="6" className="text-center p-4">
+                                {language === 'he' ? 'לא נמצאו לידים' : 'No leads found'}
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
+            </table >
+        </div >
+    );
+
+    // GRID VIEW
+    const renderGridView = () => (
+        <div className="customers-grid">
+            {filteredLeads.map(lead => (
+                <div key={lead.id} className="customer-card glass-card" onClick={() => handleView(lead)}>
+                    <div className="card-header">
+                        <div className="customer-avatar large" style={{ background: LEAD_STAGES[lead.stage]?.color }}>
+                            <User size={24} />
+                        </div>
+                        <span className="source-badge">{LEAD_SOURCES[lead.source]?.label[language]}</span>
+                    </div>
+                    <h4>{lead.name}</h4>
+                    <p className="company">{lead.company || '-'}</p>
+                    <div className="card-stats">
+                        <div className="stat">
+                            <span className="stat-value">₪{(lead.estimatedValue || 0).toLocaleString()}</span>
+                            <span className="stat-label">{language === 'he' ? 'ערך' : 'Value'}</span>
+                        </div>
+                        <div className="stat">
+                            <span className="stat-value" style={{ color: LEAD_STAGES[lead.stage]?.color }}>
+                                {LEAD_STAGES[lead.stage]?.label[language]}
+                            </span>
+                            <span className="stat-label">{language === 'he' ? 'שלב' : 'Stage'}</span>
+                        </div>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+
+    // KANBAN / PIPELINE WRAPPER
+    const renderKanbanView = () => renderPipelineView(); // Reuse existing pipeline logic but filtered
+
+    // Main Render Content Switcher
+    const renderContent = () => {
+        switch (currentView) {
+            case VIEW_TYPES.TABLE: return renderTableView();
+            case VIEW_TYPES.GRID: return renderGridView();
+            case VIEW_TYPES.PIPELINE: return renderPipelineView();
+            case VIEW_TYPES.KANBAN: return renderKanbanView();
+            case VIEW_TYPES.LIST: return renderTableView(); // Reuse table for list for now
+            default: return renderPipelineView();
+        }
+    };
+
     return (
         <div className="leads-page">
             {/* Toast */}
@@ -495,6 +597,9 @@ function Leads({ currentUser, t, language }) {
 
             {/* Toolbar */}
             <div className="toolbar glass-card">
+                <div className="toolbar-left">
+                    <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
+                </div>
                 <div className="toolbar-right">
                     <div className="search-input">
                         <Search size={18} />
@@ -534,8 +639,8 @@ function Leads({ currentUser, t, language }) {
                 </div>
             </div>
 
-            {/* Pipeline View */}
-            {renderPipelineView()}
+            {/* Content View */}
+            {renderContent()}
 
             {/* Closed Deals */}
             {renderClosedDeals()}
