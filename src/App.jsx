@@ -203,7 +203,14 @@ function AppContent() {
         <div className="main-content">
           {/* Top Header */}
           <header className="top-header">
-            <div className="header-right">
+            <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                className="icon-button header-toggle"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                aria-label="Toggle Menu"
+              >
+                <Menu size={20} />
+              </button>
               <h1 className="page-title">
                 {t(navItems.find(item => item.path === location.pathname)?.labelKey || 'dashboard')}
               </h1>

@@ -950,3 +950,21 @@
     display: none !important;
   }
 }
+
+/* Header Toggle Button */
+.header-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 8px;
+  margin-inline-end: 8px;
+}
+
+.header-toggle:hover {
+  background: var(--bg-hover);
+}
