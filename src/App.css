@@ -903,3 +903,10 @@
     z-index: 1500 !important;
   }
 }
+
+/* Fix: Hide overlay on desktop */
+@media (min-width: 769px) {
+  .sidebar-overlay {
+    display: none !important;
+  }
+}
