@@ -14,13 +14,16 @@ import {
     X,
     Copy,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    Target,
+    Clock
 } from 'lucide-react';
 import { workflowsService, departmentsService } from '../services/api';
 import Modal from '../components/Modal';
 import './Workflows.css';
 
 function Workflows({ currentUser, t, language }) {
+    const [activeTab, setActiveTab] = useState('production'); // 'production' or 'sales'
     const [workflows, setWorkflows] = useState([]);
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,6 +31,21 @@ function Workflows({ currentUser, t, language }) {
     const [expandedWorkflow, setExpandedWorkflow] = useState(null);
     const [toast, setToast] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    // Sales Pipeline State
+    const [salesStages, setSalesStages] = useState(() => {
+        const saved = localStorage.getItem('salesPipelineStages');
+        return saved ? JSON.parse(saved) : [
+            { id: 'NEW', label: 'חדש', color: '#6366f1', slaHours: 24 },
+            { id: 'CONTACT', label: 'יצירת קשר', color: '#3b82f6', slaHours: 48 },
+            { id: 'MEETING', label: 'פגישה', color: '#8b5cf6', slaHours: 72 },
+            { id: 'NEGOTIATION', label: 'משא ומתן', color: '#f59e0b', slaHours: 168 },
+            { id: 'WON', label: 'זכייה', color: '#10b981', slaHours: null },
+            { id: 'LOST', label: 'הפסד', color: '#ef4444', slaHours: null }
+        ];
+    });
+    const [newStageName, setNewStageName] = useState('');
+    const [editingStageId, setEditingStageId] = useState(null);
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -88,6 +106,37 @@ function Workflows({ currentUser, t, language }) {
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
+    };
+
+    // Sales Pipeline handlers
+    const saveSalesStages = (stages) => {
+        setSalesStages(stages);
+        localStorage.setItem('salesPipelineStages', JSON.stringify(stages));
+    };
+
+    const addSalesStage = () => {
+        if (!newStageName.trim()) return;
+        const id = newStageName.toUpperCase().replace(/\s+/g, '_');
+        const newStages = [...salesStages.slice(0, -2), { id, label: newStageName, color: '#6366f1', slaHours: 24 }, ...salesStages.slice(-2)];
+        saveSalesStages(newStages);
+        setNewStageName('');
+        showToast(language === 'he' ? 'שלב נוסף' : 'Stage added');
+    };
+
+    const updateSalesStage = (stageId, updates) => {
+        const newStages = salesStages.map(s => s.id === stageId ? { ...s, ...updates } : s);
+        saveSalesStages(newStages);
+        setEditingStageId(null);
+    };
+
+    const removeSalesStage = (stageId) => {
+        if (['WON', 'LOST', 'NEW'].includes(stageId)) {
+            showToast(language === 'he' ? 'לא ניתן למחוק שלב זה' : 'Cannot delete this stage', 'error');
+            return;
+        }
+        const newStages = salesStages.filter(s => s.id !== stageId);
+        saveSalesStages(newStages);
+        showToast(language === 'he' ? 'שלב נמחק' : 'Stage deleted');
     };
 
     // Workflow handlers
@@ -358,9 +407,9 @@ function Workflows({ currentUser, t, language }) {
             <div className="page-header">
                 <div className="header-info">
                     <h2>{language === 'he' ? 'תהליכי עבודה' : 'Workflows'}</h2>
-                    <p>{workflows.length} {language === 'he' ? 'תהליכים' : 'workflows'}</p>
+                    <p>{language === 'he' ? 'ניהול תהליכי ייצור ומכירות' : 'Production & Sales Workflows'}</p>
                 </div>
-                {canEdit && (
+                {canEdit && activeTab === 'production' && (
                     <button className="btn btn-primary" onClick={handleAddWorkflow}>
                         <Plus size={18} />
                         {language === 'he' ? 'תהליך חדש' : 'New Workflow'}
@@ -368,127 +417,299 @@ function Workflows({ currentUser, t, language }) {
                 )}
             </div>
 
-            <div className="workflows-list">
-                {workflows.map(workflow => (
-                    <div key={workflow.id} className="workflow-card glass-card">
-                        <div
-                            className="workflow-header"
-                            onClick={() => setExpandedWorkflow(expandedWorkflow === workflow.id ? null : workflow.id)}
-                        >
-                            <div className="workflow-icon">
-                                <GitBranch size={24} />
+            {/* Tabs */}
+            <div className="workflow-tabs glass-card" style={{ display: 'flex', gap: '8px', padding: '8px', marginBottom: '20px', borderRadius: '12px' }}>
+                <button
+                    className={`tab-btn ${activeTab === 'production' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('production')}
+                    style={{
+                        flex: 1,
+                        padding: '12px 20px',
+                        border: 'none',
+                        borderRadius: '8px',
+                        background: activeTab === 'production' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontWeight: activeTab === 'production' ? 600 : 400,
+                        transition: 'all 0.3s'
+                    }}
+                >
+                    <GitBranch size={18} />
+                    {language === 'he' ? 'תהליכי ייצור' : 'Production'}
+                </button>
+                <button
+                    className={`tab-btn ${activeTab === 'sales' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('sales')}
+                    style={{
+                        flex: 1,
+                        padding: '12px 20px',
+                        border: 'none',
+                        borderRadius: '8px',
+                        background: activeTab === 'sales' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+                        color: 'inherit',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontWeight: activeTab === 'sales' ? 600 : 400,
+                        transition: 'all 0.3s'
+                    }}
+                >
+                    <Target size={18} />
+                    {language === 'he' ? 'תהליך מכירות' : 'Sales Pipeline'}
+                </button>
+            </div>
+
+            {/* Sales Pipeline Tab Content */}
+            {activeTab === 'sales' && (
+                <div className="sales-pipeline-content glass-card" style={{ padding: '24px', borderRadius: '16px' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                        <h3 style={{ marginBottom: '8px' }}>{language === 'he' ? 'שלבי מכירות' : 'Sales Stages'}</h3>
+                        <p style={{ opacity: 0.6, fontSize: '0.9rem' }}>{language === 'he' ? 'הגדר את השלבים שכל ליד עובר בתהליך המכירה' : 'Define the stages each lead goes through'}</p>
+                    </div>
+
+                    {/* Stages List */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
+                        {salesStages.map((stage, index) => (
+                            <div key={stage.id} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '12px',
+                                padding: '14px 16px',
+                                background: 'rgba(255,255,255,0.03)',
+                                borderRadius: '10px',
+                                borderInlineStart: `4px solid ${stage.color}`
+                            }}>
+                                <div style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '50%',
+                                    background: stage.color,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
+                                }}>{index + 1}</div>
+
+                                {editingStageId === stage.id ? (
+                                    <>
+                                        <input
+                                            type="text"
+                                            className="form-input"
+                                            defaultValue={stage.label}
+                                            style={{ flex: 1 }}
+                                            onBlur={(e) => updateSalesStage(stage.id, { label: e.target.value })}
+                                            autoFocus
+                                        />
+                                        <input
+                                            type="color"
+                                            defaultValue={stage.color}
+                                            onChange={(e) => updateSalesStage(stage.id, { color: e.target.value })}
+                                            style={{ width: '40px', height: '32px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                        />
+                                        <input
+                                            type="number"
+                                            defaultValue={stage.slaHours || 24}
+                                            onChange={(e) => updateSalesStage(stage.id, { slaHours: parseInt(e.target.value) || null })}
+                                            style={{ width: '70px' }}
+                                            className="form-input"
+                                            placeholder="SLA"
+                                        />
+                                        <span style={{ fontSize: '0.8rem', opacity: 0.6 }}>{language === 'he' ? 'שעות' : 'hours'}</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span style={{ flex: 1, fontWeight: 500 }}>{stage.label}</span>
+                                        {stage.slaHours && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: 0.6, fontSize: '0.85rem' }}>
+                                                <Clock size={14} />
+                                                {stage.slaHours}h
+                                            </div>
+                                        )}
+                                        {canEdit && (
+                                            <>
+                                                <button
+                                                    className="action-btn"
+                                                    onClick={() => setEditingStageId(stage.id)}
+                                                    style={{ opacity: 0.6, background: 'none', border: 'none', cursor: 'pointer', color: 'inherit' }}
+                                                >
+                                                    <Edit size={14} />
+                                                </button>
+                                                {!['WON', 'LOST', 'NEW'].includes(stage.id) && (
+                                                    <button
+                                                        className="action-btn danger"
+                                                        onClick={() => removeSalesStage(stage.id)}
+                                                        style={{ opacity: 0.6, background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444' }}
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </>
+                                )}
                             </div>
+                        ))}
+                    </div>
 
-                            <div className="workflow-info">
-                                <h3>{workflow.name}</h3>
-                                <p>{workflow.description || '-'}</p>
-                                <div className="workflow-meta">
-                                    <span className="meta-tag code">{workflow.code}</span>
-                                    <span className="meta-tag steps">{workflow.steps?.length || 0} {language === 'he' ? 'שלבים' : 'steps'}</span>
-                                    {workflow.productCount > 0 && (
-                                        <span className="meta-tag products">{workflow.productCount} {language === 'he' ? 'מוצרים' : 'products'}</span>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="workflow-status">
-                                <span className={`status-badge ${workflow.isActive !== false ? 'active' : 'inactive'}`}>
-                                    {workflow.isActive !== false ? (language === 'he' ? 'פעיל' : 'Active') : (language === 'he' ? 'לא פעיל' : 'Inactive')}
-                                </span>
-                            </div>
-
-                            {canEdit && (
-                                <div className="workflow-actions" onClick={(e) => e.stopPropagation()}>
-                                    <button className="action-btn" onClick={() => handleDuplicateWorkflow(workflow)} title={language === 'he' ? 'שכפול' : 'Duplicate'}>
-                                        <Copy size={16} />
-                                    </button>
-                                    <button className="action-btn" onClick={() => handleEditWorkflow(workflow)} title={language === 'he' ? 'עריכה' : 'Edit'}>
-                                        <Edit size={16} />
-                                    </button>
-                                    <button className="action-btn danger" onClick={() => { setSelectedWorkflow(workflow); setShowDeleteModal(true); }} title={language === 'he' ? 'מחיקה' : 'Delete'}>
-                                        <Trash2 size={16} />
-                                    </button>
-                                </div>
-                            )}
-
-                            <button className="expand-btn">
-                                {expandedWorkflow === workflow.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    {/* Add Stage */}
+                    {canEdit && (
+                        <div style={{
+                            display: 'flex',
+                            gap: '12px',
+                            padding: '16px',
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '2px dashed rgba(255,255,255,0.1)',
+                            borderRadius: '10px'
+                        }}>
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder={language === 'he' ? 'שם שלב חדש...' : 'New stage name...'}
+                                value={newStageName}
+                                onChange={(e) => setNewStageName(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && addSalesStage()}
+                                style={{ flex: 1 }}
+                            />
+                            <button className="btn btn-primary" onClick={addSalesStage}>
+                                <Plus size={16} />
+                                {language === 'he' ? 'הוסף' : 'Add'}
                             </button>
                         </div>
+                    )}
+                </div>
+            )}
 
-                        {expandedWorkflow === workflow.id && (
-                            <div className="workflow-steps">
-                                <h4>{language === 'he' ? 'שלבי התהליך' : 'Process Steps'}</h4>
-                                <div className="steps-timeline">
-                                    {(workflow.steps || []).map((step, index) => (
-                                        <div key={step.id} className="step-item">
-                                            <div className="step-connector">
-                                                <div className="step-number">{index + 1}</div>
-                                                {index < (workflow.steps?.length || 0) - 1 && <div className="step-line"></div>}
-                                            </div>
+            {/* Production Workflows Tab Content */}
+            {activeTab === 'production' && (
+                <div className="workflows-list">
+                    {workflows.map(workflow => (
+                        <div key={workflow.id} className="workflow-card glass-card">
+                            <div
+                                className="workflow-header"
+                                onClick={() => setExpandedWorkflow(expandedWorkflow === workflow.id ? null : workflow.id)}
+                            >
+                                <div className="workflow-icon">
+                                    <GitBranch size={24} />
+                                </div>
 
-                                            <div className="step-content">
-                                                <div className="step-header">
-                                                    <h5>{step.name}</h5>
-                                                    {canEdit && (
-                                                        <div className="step-actions">
-                                                            {index > 0 && (
-                                                                <button className="step-action-btn move" onClick={() => handleMoveStep(workflow, step, 'up')} title={language === 'he' ? 'העבר למעלה' : 'Move up'}>
-                                                                    <ArrowUp size={14} />
-                                                                </button>
-                                                            )}
-                                                            {index < (workflow.steps?.length || 0) - 1 && (
-                                                                <button className="step-action-btn move" onClick={() => handleMoveStep(workflow, step, 'down')} title={language === 'he' ? 'העבר למטה' : 'Move down'}>
-                                                                    <ArrowDown size={14} />
-                                                                </button>
-                                                            )}
-                                                            <button className="step-action-btn" onClick={() => handleEditStep(workflow, step)} title={language === 'he' ? 'עריכה' : 'Edit'}>
-                                                                <Edit size={16} />
-                                                            </button>
-                                                            <button className="step-action-btn danger" onClick={() => handleDeleteStep(workflow, step)} title={language === 'he' ? 'מחיקה' : 'Delete'}>
-                                                                <Trash2 size={16} />
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                <div className="step-details">
-                                                    {step.department && (
-                                                        <div
-                                                            className="dept-badge"
-                                                            style={{
-                                                                background: `${step.department.color || '#667eea'}20`,
-                                                                color: step.department.color || '#667eea'
-                                                            }}
-                                                        >
-                                                            <Building2 size={14} />
-                                                            {step.department.name}
-                                                        </div>
-                                                    )}
-                                                    <span className="duration">{step.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                                <div className="workflow-info">
+                                    <h3>{workflow.name}</h3>
+                                    <p>{workflow.description || '-'}</p>
+                                    <div className="workflow-meta">
+                                        <span className="meta-tag code">{workflow.code}</span>
+                                        <span className="meta-tag steps">{workflow.steps?.length || 0} {language === 'he' ? 'שלבים' : 'steps'}</span>
+                                        {workflow.productCount > 0 && (
+                                            <span className="meta-tag products">{workflow.productCount} {language === 'he' ? 'מוצרים' : 'products'}</span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="workflow-status">
+                                    <span className={`status-badge ${workflow.isActive !== false ? 'active' : 'inactive'}`}>
+                                        {workflow.isActive !== false ? (language === 'he' ? 'פעיל' : 'Active') : (language === 'he' ? 'לא פעיל' : 'Inactive')}
+                                    </span>
                                 </div>
 
                                 {canEdit && (
-                                    <button className="add-step-btn" onClick={() => handleAddStep(workflow)}>
-                                        <Plus size={16} />
-                                        {language === 'he' ? 'הוסף שלב' : 'Add Step'}
-                                    </button>
+                                    <div className="workflow-actions" onClick={(e) => e.stopPropagation()}>
+                                        <button className="action-btn" onClick={() => handleDuplicateWorkflow(workflow)} title={language === 'he' ? 'שכפול' : 'Duplicate'}>
+                                            <Copy size={16} />
+                                        </button>
+                                        <button className="action-btn" onClick={() => handleEditWorkflow(workflow)} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                                            <Edit size={16} />
+                                        </button>
+                                        <button className="action-btn danger" onClick={() => { setSelectedWorkflow(workflow); setShowDeleteModal(true); }} title={language === 'he' ? 'מחיקה' : 'Delete'}>
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 )}
-                            </div>
-                        )}
-                    </div>
-                ))}
 
-                {workflows.length === 0 && (
-                    <div className="empty-state">
-                        <GitBranch size={48} />
-                        <p>{language === 'he' ? 'לא נמצאו תהליכים' : 'No workflows found'}</p>
-                    </div>
-                )}
-            </div>
+                                <button className="expand-btn">
+                                    {expandedWorkflow === workflow.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                </button>
+                            </div>
+
+                            {expandedWorkflow === workflow.id && (
+                                <div className="workflow-steps">
+                                    <h4>{language === 'he' ? 'שלבי התהליך' : 'Process Steps'}</h4>
+                                    <div className="steps-timeline">
+                                        {(workflow.steps || []).map((step, index) => (
+                                            <div key={step.id} className="step-item">
+                                                <div className="step-connector">
+                                                    <div className="step-number">{index + 1}</div>
+                                                    {index < (workflow.steps?.length || 0) - 1 && <div className="step-line"></div>}
+                                                </div>
+
+                                                <div className="step-content">
+                                                    <div className="step-header">
+                                                        <h5>{step.name}</h5>
+                                                        {canEdit && (
+                                                            <div className="step-actions">
+                                                                {index > 0 && (
+                                                                    <button className="step-action-btn move" onClick={() => handleMoveStep(workflow, step, 'up')} title={language === 'he' ? 'העבר למעלה' : 'Move up'}>
+                                                                        <ArrowUp size={14} />
+                                                                    </button>
+                                                                )}
+                                                                {index < (workflow.steps?.length || 0) - 1 && (
+                                                                    <button className="step-action-btn move" onClick={() => handleMoveStep(workflow, step, 'down')} title={language === 'he' ? 'העבר למטה' : 'Move down'}>
+                                                                        <ArrowDown size={14} />
+                                                                    </button>
+                                                                )}
+                                                                <button className="step-action-btn" onClick={() => handleEditStep(workflow, step)} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                                                                    <Edit size={16} />
+                                                                </button>
+                                                                <button className="step-action-btn danger" onClick={() => handleDeleteStep(workflow, step)} title={language === 'he' ? 'מחיקה' : 'Delete'}>
+                                                                    <Trash2 size={16} />
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="step-details">
+                                                        {step.department && (
+                                                            <div
+                                                                className="dept-badge"
+                                                                style={{
+                                                                    background: `${step.department.color || '#667eea'}20`,
+                                                                    color: step.department.color || '#667eea'
+                                                                }}
+                                                            >
+                                                                <Building2 size={14} />
+                                                                {step.department.name}
+                                                            </div>
+                                                        )}
+                                                        <span className="duration">{step.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {canEdit && (
+                                        <button className="add-step-btn" onClick={() => handleAddStep(workflow)}>
+                                            <Plus size={16} />
+                                            {language === 'he' ? 'הוסף שלב' : 'Add Step'}
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {workflows.length === 0 && (
+                        <div className="empty-state">
+                            <GitBranch size={48} />
+                            <p>{language === 'he' ? 'לא נמצאו תהליכים' : 'No workflows found'}</p>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Add/Edit Workflow Modal */}
             <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={selectedWorkflow ? (language === 'he' ? 'עריכת תהליך' : 'Edit Workflow') : (language === 'he' ? 'תהליך חדש' : 'New Workflow')}>
