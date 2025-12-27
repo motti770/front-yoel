@@ -176,7 +176,8 @@ function Leads({ currentUser, t, language }) {
         wonValue: leads.filter(l => l.stage === 'WON').reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0),
         conversionRate: leads.length > 0 ? ((leads.filter(l => l.stage === 'WON').length / leads.length) * 100).toFixed(1) : 0,
         proposalsCount: leads.filter(l => l.stage === 'NEGOTIATION').length,
-        proposalsValue: leads.filter(l => l.stage === 'NEGOTIATION').reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0)
+        proposalsValue: leads.filter(l => l.stage === 'NEGOTIATION').reduce((sum, l) => sum + (Number(l.estimatedValue) || 0), 0),
+        overdueCount: leads.filter(lead => isLeadOverdue(lead)).length
     };
 
     // Toast helper
@@ -623,12 +624,19 @@ function Leads({ currentUser, t, language }) {
                             </td>
                             <td>{lead.company || '-'}</td>
                             <td>
-                                <span className="status-badge" style={{
-                                    background: `${LEAD_STAGES[lead.stage]?.color || '#888'}20`,
-                                    color: LEAD_STAGES[lead.stage]?.color || '#888'
-                                }}>
-                                    {LEAD_STAGES[lead.stage]?.label[language] || lead.stage}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className="status-badge" style={{
+                                        background: `${LEAD_STAGES[lead.stage]?.color || '#888'}20`,
+                                        color: LEAD_STAGES[lead.stage]?.color || '#888'
+                                    }}>
+                                        {LEAD_STAGES[lead.stage]?.label[language] || lead.stage}
+                                    </span>
+                                    {isLeadOverdue(lead) && (
+                                        <span title={language === 'he' ? 'חריגת זמן!' : 'SLA Exceeded!'} style={{ color: '#ef4444' }}>
+                                            <AlertTriangle size={14} />
+                                        </span>
+                                    )}
+                                </div>
                             </td>
                             <td>₪{(Number(lead.estimatedValue) || 0).toLocaleString()}</td>
                             <td>{LEAD_SOURCES[lead.source]?.label[language] || lead.source}</td>
@@ -831,6 +839,15 @@ function Leads({ currentUser, t, language }) {
                         <span className="metric-value">{pipelineMetrics.conversionRate}%</span>
                         <span className="metric-label">{language === 'he' ? 'המרה' : 'Conv.'}</span>
                     </div>
+                    {pipelineMetrics.overdueCount > 0 && (
+                        <div className="metric" style={{ background: 'rgba(239, 68, 68, 0.15)', borderRadius: '8px', padding: '8px 16px' }}>
+                            <span className="metric-value" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <AlertTriangle size={16} />
+                                {pipelineMetrics.overdueCount}
+                            </span>
+                            <span className="metric-label" style={{ color: '#ef4444' }}>{language === 'he' ? 'חריגות' : 'Overdue'}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="header-actions" style={{ position: 'relative' }}>
