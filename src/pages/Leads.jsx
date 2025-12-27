@@ -28,11 +28,12 @@ import {
     ChevronRight,
     MoreHorizontal,
     Users,
-    CheckCircle2,
-    Layers,
     Briefcase,
     CheckSquare,
-    Square
+    Square,
+    UserPlus,
+    FileSpreadsheet,
+    Sparkles
 } from 'lucide-react';
 import { leadsService, customersService, ordersService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
@@ -83,6 +84,7 @@ function Leads({ currentUser, t, language }) {
     const [showConvertModal, setShowConvertModal] = useState(false);
     const [conversionChecks, setConversionChecks] = useState({ offerAccepted: false, designApproved: false });
     const [selectedLead, setSelectedLead] = useState(null);
+    const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [toast, setToast] = useState(null);
     const [saving, setSaving] = useState(false);
     const [draggedLead, setDraggedLead] = useState(null);
@@ -764,7 +766,14 @@ function Leads({ currentUser, t, language }) {
             }
 
             {/* Page Header */}
-            <div className="page-header-section glass-card">
+            <div className="page-header-section glass-card" style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'nowrap', // Prevent wrapping
+                overflowX: 'auto',  // Allow scrolling on small screens
+                gap: '16px'
+            }}>
                 <div className="header-left">
                     <div className="page-icon">
                         <Target size={28} />
@@ -776,7 +785,12 @@ function Leads({ currentUser, t, language }) {
                 </div>
 
                 {/* Metrics */}
-                <div className="pipeline-metrics">
+                <div className="pipeline-metrics" style={{
+                    display: 'flex',
+                    gap: '24px',
+                    flex: '1 0 auto',
+                    paddingInline: '16px'
+                }}>
                     <div className="metric">
                         <span className="metric-value">{pipelineMetrics.totalLeads}</span>
                         <span className="metric-label">{language === 'he' ? 'לידים' : 'Leads'}</span>
@@ -802,12 +816,48 @@ function Leads({ currentUser, t, language }) {
                     </div>
                 </div>
 
-                <div className="header-actions">
-
-                    <button className="btn btn-primary" onClick={openAddModal}>
+                <div className="header-actions" style={{ position: 'relative' }}>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => setShowActionsMenu(!showActionsMenu)}
+                        style={{ paddingInlineEnd: '12px', display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}
+                    >
                         <Plus size={18} />
-                        {language === 'he' ? 'ליד חדש' : 'New Lead'}
+                        {language === 'he' ? 'הוסף ליד' : 'Add Lead'}
+                        <ChevronDown size={14} style={{ marginInlineStart: '4px', opacity: 0.7 }} />
                     </button>
+
+                    {showActionsMenu && (
+                        <>
+                            <div className="dropdown-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setShowActionsMenu(false)} />
+                            <div className="actions-dropdown glass-card" style={{
+                                position: 'absolute',
+                                top: 'calc(100% + 8px)',
+                                insetInlineEnd: 0,
+                                width: '220px',
+                                zIndex: 100,
+                                padding: '8px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+                            }}>
+                                <button className="dropdown-item" onClick={() => { openAddModal(); setShowActionsMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '6px', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'start' }}>
+                                    <UserPlus size={16} style={{ opacity: 0.7 }} />
+                                    <span>{language === 'he' ? 'יצירה ידנית' : 'Manual Entry'}</span>
+                                </button>
+                                <button className="dropdown-item" onClick={() => { setShowImportModal(true); setShowActionsMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '6px', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'start' }}>
+                                    <FileSpreadsheet size={16} style={{ opacity: 0.7 }} />
+                                    <span>{language === 'he' ? 'ייבוא מקובץ' : 'Import File'}</span>
+                                </button>
+                                <button className="dropdown-item" onClick={() => { scanForDuplicates(); setShowActionsMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', borderRadius: '6px', background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', textAlign: 'start' }}>
+                                    <Sparkles size={16} style={{ opacity: 0.7 }} />
+                                    <span>{language === 'he' ? 'ניקוי כפילויות' : 'Cleanup Duplicates'}</span>
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -816,15 +866,7 @@ function Leads({ currentUser, t, language }) {
                 <div className="toolbar-left">
                     <ViewSwitcher currentView={currentView} onViewChange={setCurrentView} />
                 </div>
-                <div className="toolbar-right">
-                    <div className="toolbar-actions-group" style={{ display: 'flex', gap: '8px', marginInlineEnd: '12px', borderInlineEnd: '1px solid rgba(255,255,255,0.1)', paddingInlineEnd: '12px' }}>
-                        <button className="icon-btn" onClick={() => setShowImportModal(true)} title={language === 'he' ? 'ייבוא לידים' : 'Import Leads'}>
-                            <Upload size={18} />
-                        </button>
-                        <button className="icon-btn" onClick={scanForDuplicates} title={language === 'he' ? 'ניקוי כפילויות' : 'Cleanup Duplicates'}>
-                            <Users size={18} />
-                        </button>
-                    </div>
+                <div className="toolbar-right" style={{ flex: '1 1 auto', display: 'flex', justifyContent: 'flex-end', minWidth: 0, gap: '12px' }}>
 
                     {(currentView === VIEW_TYPES.TABLE || currentView === VIEW_TYPES.LIST || currentView === VIEW_TYPES.GRID) && (
                         <div className="group-by-control" style={{ marginInlineEnd: '12px', borderInlineEnd: '1px solid rgba(255,255,255,0.1)', paddingInlineEnd: '12px' }}>
@@ -1311,6 +1353,7 @@ function Leads({ currentUser, t, language }) {
                                     </span>
                                 </div>
                             </div>
+
 
                             <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
                                 <button className="btn btn-outline" onClick={() => setShowConvertModal(false)}>
