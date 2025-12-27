@@ -1104,20 +1104,7 @@ function Leads({ currentUser, t, language }) {
                 </div>
             </Modal>
 
-            {/* Convert to Customer Modal */}
-            <Modal isOpen={showConvertModal} onClose={() => setShowConvertModal(false)} title={language === 'he' ? 'המרה ללקוח' : 'Convert to Customer'} size="small">
-                <div className="convert-confirm">
-                    <TrendingUp size={48} className="success-icon" />
-                    <p>{language === 'he' ? 'להפוך את הליד ללקוח פעיל?' : 'Convert this lead to an active customer?'}</p>
-                    <div className="modal-actions">
-                        <button className="btn btn-outline" onClick={() => setShowConvertModal(false)}>{t('cancel')}</button>
-                        <button className="btn btn-success" onClick={handleConvertToCustomer} disabled={saving}>
-                            {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}
-                            {language === 'he' ? 'המר ללקוח' : 'Convert'}
-                        </button>
-                    </div>
-                </div>
-            </Modal>
+
 
             {/* Deduplication Modal */}
             <Modal
