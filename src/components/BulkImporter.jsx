@@ -29,11 +29,12 @@ import './BulkImporter.css';
 // Supported file types
 const SUPPORTED_TYPES = {
     spreadsheet: ['.csv', '.xlsx', '.xls'],
+    json: ['.json'],
     image: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
     document: ['.pdf']
 };
 
-const ALL_TYPES = [...SUPPORTED_TYPES.spreadsheet, ...SUPPORTED_TYPES.image, ...SUPPORTED_TYPES.document];
+const ALL_TYPES = [...SUPPORTED_TYPES.spreadsheet, ...SUPPORTED_TYPES.json, ...SUPPORTED_TYPES.image, ...SUPPORTED_TYPES.document];
 
 // Step indicators
 const STEPS = [
@@ -140,6 +141,7 @@ function BulkImporter({
     const getFileType = (filename) => {
         const ext = '.' + filename.split('.').pop().toLowerCase();
         if (SUPPORTED_TYPES.spreadsheet.includes(ext)) return 'spreadsheet';
+        if (SUPPORTED_TYPES.json.includes(ext)) return 'json';
         if (SUPPORTED_TYPES.image.includes(ext)) return 'image';
         if (SUPPORTED_TYPES.document.includes(ext)) return 'document';
         return null;
@@ -161,6 +163,8 @@ function BulkImporter({
         try {
             if (type === 'spreadsheet') {
                 await processSpreadsheet(uploadedFile);
+            } else if (type === 'json') {
+                await processJSON(uploadedFile);
             } else if (type === 'image') {
                 processImage(uploadedFile);
             } else if (type === 'document') {
@@ -169,6 +173,48 @@ function BulkImporter({
         } catch (err) {
             setError(err.message || 'Error processing file');
         }
+    };
+
+    // Process JSON
+    const processJSON = async (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    let dataArray = [];
+
+                    if (Array.isArray(json)) {
+                        dataArray = json;
+                    } else if (json.data && Array.isArray(json.data)) {
+                        dataArray = json.data;
+                    } else if (json.items && Array.isArray(json.items)) {
+                        dataArray = json.items;
+                    } else {
+                        // Single object? try to wrap
+                        dataArray = [json];
+                    }
+
+                    if (dataArray.length === 0) {
+                        reject(new Error(t.noData));
+                        return;
+                    }
+
+                    // Extract headers from first Item (or all items if inconsistent)
+                    const headers = Array.from(new Set(dataArray.flatMap(Object.keys)));
+
+                    setSourceColumns(headers);
+                    setRawData(dataArray);
+                    autoMapFields(headers);
+                    setCurrentStep(2);
+                    resolve();
+                } catch (err) {
+                    reject(new Error('Invalid JSON format'));
+                }
+            };
+            reader.onerror = () => reject(new Error('Error reading file'));
+            reader.readAsText(file);
+        });
     };
 
     // Process spreadsheet (CSV/Excel)
@@ -429,6 +475,20 @@ function BulkImporter({
                             <div className="file-type-icon">
                                 <FileText size={24} />
                                 <span>PDF</span>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid rgba(255,255,255,0.1)', width: '100%' }}>
+                            <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '8px' }}>
+                                {language === 'he' ? 'להורדת קבצים לדוגמה:' : 'Download sample files:'}
+                            </p>
+                            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                                <a href="/samples/leads_sample.csv" download className="text-blue-400 hover:text-blue-300 flex items-center gap-2 text-sm">
+                                    <FileSpreadsheet size={14} /> CSV
+                                </a>
+                                <a href="/samples/leads_sample.json" download className="text-blue-400 hover:text-blue-300 flex items-center gap-2 text-sm">
+                                    <FileText size={14} /> JSON
+                                </a>
                             </div>
                         </div>
                     </>
