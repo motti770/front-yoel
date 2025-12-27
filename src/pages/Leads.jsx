@@ -26,7 +26,9 @@ import {
     Upload,
     ChevronDown,
     ChevronRight,
-    MoreHorizontal
+    MoreHorizontal,
+    Users,
+    CheckCircle2
 } from 'lucide-react';
 import { leadsService, customersService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
@@ -137,7 +139,9 @@ function Leads({ currentUser, t, language }) {
         totalLeads: leads.length,
         totalValue: leads.reduce((sum, lead) => sum + (lead.estimatedValue || 0), 0),
         wonValue: leads.filter(l => l.stage === 'WON').reduce((sum, l) => sum + (l.estimatedValue || 0), 0),
-        conversionRate: leads.length > 0 ? ((leads.filter(l => l.stage === 'WON').length / leads.length) * 100).toFixed(1) : 0
+        conversionRate: leads.length > 0 ? ((leads.filter(l => l.stage === 'WON').length / leads.length) * 100).toFixed(1) : 0,
+        proposalsCount: leads.filter(l => l.stage === 'NEGOTIATION').length,
+        proposalsValue: leads.filter(l => l.stage === 'NEGOTIATION').reduce((sum, l) => sum + (l.estimatedValue || 0), 0)
     };
 
     // Toast helper
@@ -615,6 +619,13 @@ function Leads({ currentUser, t, language }) {
                     <div className="metric">
                         <span className="metric-value">₪{(pipelineMetrics.totalValue / 1000).toFixed(0)}K</span>
                         <span className="metric-label">{language === 'he' ? 'פוטנציאל' : 'Pipeline'}</span>
+                    </div>
+                    <div className="metric">
+                        <span className="metric-value">₪{(pipelineMetrics.proposalsValue / 1000).toFixed(0)}K</span>
+                        <span className="metric-label">
+                            {language === 'he' ? 'הצעות' : 'Proposals'}
+                            <span style={{ fontSize: '0.8em', opacity: 0.7, marginInlineStart: '4px' }}>({pipelineMetrics.proposalsCount})</span>
+                        </span>
                     </div>
                     <div className="metric won">
                         <span className="metric-value">₪{(pipelineMetrics.wonValue / 1000).toFixed(0)}K</span>
