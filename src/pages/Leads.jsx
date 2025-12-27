@@ -1021,46 +1021,50 @@ function Leads({ currentUser, t, language }) {
                         { key: 'estimatedValue', label: language === 'he' ? 'ערך משוער' : 'Est. Value', type: 'number', required: false }
                     ]}
                     onImport={async (data) => {
-                        // Simulate API call delay
-                        await new Promise(resolve => setTimeout(resolve, 50));
+                        // Normalize email for check
+                        const normalizeEmail = (e) => e?.toLowerCase().trim();
+                        const existingLead = leads.find(l => normalizeEmail(l.email) === normalizeEmail(data.email));
 
-                        let resultLead = null;
+                        try {
+                            if (existingLead) {
+                                // UPDATE existing lead
+                                const updatedFields = { ...data };
+                                console.log('[Import] Updating lead:', existingLead.id);
 
-                        setLeads(prevLeads => {
-                            // Find duplicate by email
-                            const existingIndex = prevLeads.findIndex(l =>
-                                (l.email && data.email && l.email.toLowerCase() === data.email.toLowerCase())
-                            );
+                                const result = await leadsService.update(existingLead.id, updatedFields);
 
-                            if (existingIndex >= 0) {
-                                // Update existing lead
-                                const updatedLeads = [...prevLeads];
-                                const existingLead = updatedLeads[existingIndex];
-                                updatedLeads[existingIndex] = {
-                                    ...existingLead,
-                                    ...data,
-                                    // Preserve critical fields if not in data
-                                    id: existingLead.id,
-                                    stage: existingLead.stage,
-                                    createdAt: existingLead.createdAt
-                                };
-                                resultLead = updatedLeads[existingIndex];
-                                return updatedLeads;
+                                if (result.success) {
+                                    // Update local state
+                                    const updated = result.data || { ...existingLead, ...updatedFields };
+                                    setLeads(prev => prev.map(l => l.id === existingLead.id ? updated : l));
+                                    return updated;
+                                } else {
+                                    throw new Error(result.error?.message || 'Update failed');
+                                }
                             } else {
-                                // Create new lead
-                                const newLead = {
-                                    id: `lead-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                                // CREATE new lead
+                                const payload = {
                                     stage: 'NEW',
-                                    createdAt: new Date().toISOString().split('T')[0],
                                     source: 'IMPORT',
                                     ...data
                                 };
-                                resultLead = newLead;
-                                return [newLead, ...prevLeads];
-                            }
-                        });
+                                console.log('[Import] Creating new lead');
 
-                        return resultLead;
+                                const result = await leadsService.create(payload);
+
+                                if (result.success && result.data) {
+                                    // Update local state
+                                    const newLead = result.data;
+                                    setLeads(prev => [newLead, ...prev]);
+                                    return newLead;
+                                } else {
+                                    throw new Error(result.error?.message || 'Create failed');
+                                }
+                            }
+                        } catch (err) {
+                            console.error('[Import] Error:', err);
+                            throw err;
+                        }
                     }}
                     language={language}
                     onClose={() => {
