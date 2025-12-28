@@ -22,7 +22,7 @@ import {
     FolderPlus,
     GripVertical
 } from 'lucide-react';
-import { ordersService, customersService, productsService, tasksService } from '../services/api';
+import { ordersService, customersService, productsService, tasksService, workflowsService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import ProductConfigurator from '../components/ProductConfigurator';
@@ -178,27 +178,82 @@ function Orders({ currentUser, t, language }) {
     };
 
     // Generate Workflow Task Manually
+    // Generate Workflow Tasks Automatically
     const generateProductionTask = async () => {
         if (!selectedOrder) return;
         try {
             setSaving(true);
-            const taskData = {
-                title: `${language === 'he' ? 'הזמנת עבודה' : 'Work Order'}: ${selectedOrder.orderNumber}`,
-                description: `${language === 'he' ? 'ייצור עבור' : 'Production for'} ${selectedOrder.customer?.name || 'Customer'}. ${selectedOrder.items?.length || 0} items.`,
-                status: 'PENDING',
-                priority: 'HIGH',
-                departmentId: 'dept-1', // Default to first dept
-                orderId: selectedOrder.id
-            };
+            let tasksCreated = 0;
 
-            await tasksService.create(taskData);
-            showToast(t?.('taskCreated') || 'Production task started', 'success');
+            // Iterate over each item in the order
+            for (const item of selectedOrder.items || []) {
+                if (!item.productId) continue;
+
+                // Try to get workflow for this product
+                try {
+                    const wfResponse = await workflowsService.getByProduct(item.productId);
+                    const workflow = wfResponse.success ? wfResponse.data : null;
+
+                    if (workflow && workflow.steps && workflow.steps.length > 0) {
+                        // Create tasks for each step in the workflow
+                        for (const step of workflow.steps) {
+                            const taskData = {
+                                title: `${step.name} - ${item.product?.name || 'Product'} (${selectedOrder.orderNumber})`,
+                                description: `Step ${step.stepOrder}: ${step.name}. ${item.selectedParameters?.map(p => `${p.name}: ${p.value}`).join(', ') || ''}`,
+                                status: 'PENDING',
+                                priority: 'MEDIUM',
+                                departmentId: step.departmentId,
+                                orderId: selectedOrder.id,
+                                orderItemId: item.id,
+                                workflowStepId: step.id,
+                                estimatedDuration: step.estimatedDurationMinutes
+                            };
+                            await tasksService.create(taskData);
+                            tasksCreated++;
+                        }
+                    } else {
+                        // Fallback: Create generic task if no workflow found
+                        const taskData = {
+                            title: `${language === 'he' ? 'ייצור' : 'Production'}: ${item.product?.name || 'Item'} (${selectedOrder.orderNumber})`,
+                            description: `${language === 'he' ? 'ייצור כללי עבור הזמנה' : 'General production for order'} ${selectedOrder.orderNumber}`,
+                            status: 'PENDING',
+                            priority: 'HIGH',
+                            departmentId: 'dept-1', // Default
+                            orderId: selectedOrder.id,
+                            orderItemId: item.id
+                        };
+                        await tasksService.create(taskData);
+                        tasksCreated++;
+                    }
+                } catch (wfErr) {
+                    console.warn(`Could not fetch workflow for product ${item.productId}`, wfErr);
+                    // Fallback on error
+                    const taskData = {
+                        title: `${language === 'he' ? 'ייצור ידני' : 'Manual Production'}: ${item.product?.name} (${selectedOrder.orderNumber})`,
+                        description: `Manual task created due to workflow error.`,
+                        status: 'PENDING',
+                        priority: 'HIGH',
+                        departmentId: 'dept-1',
+                        orderId: selectedOrder.id,
+                        orderItemId: item.id
+                    };
+                    await tasksService.create(taskData);
+                    tasksCreated++;
+                }
+            }
+
+            if (tasksCreated > 0) {
+                showToast(t?.('tasksCreated') || `${tasksCreated} tasks created successfully`, 'success');
+                // Update order status
+                await handleStatusChange(selectedOrder.id, 'PROCESSING');
+                setSelectedOrder({ ...selectedOrder, status: 'PROCESSING' });
+            } else {
+                showToast(language === 'he' ? 'לא נוצרו משימות (אין פריטים)' : 'No tasks created (no items)', 'warning');
+            }
             setShowViewModal(false);
         } catch (err) {
-            console.warn('Task creation warning:', err);
-            // Fallback for demo
-            showToast(t?.('taskCreated') || 'Production task started successfully', 'success');
-            setShowViewModal(false);
+            console.error('Task creation failed:', err);
+            showToast(t?.('taskCreationFailed') || 'Failed to create tasks', 'error');
         } finally {
             setSaving(false);
         }

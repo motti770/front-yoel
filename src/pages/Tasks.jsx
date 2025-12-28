@@ -16,9 +16,11 @@ import {
     Users,
     FolderPlus,
     GripVertical,
-    Trash2
+    Trash2,
+    Upload,
+    File
 } from 'lucide-react';
-import { tasksService, departmentsService } from '../services/api';
+import { tasksService, departmentsService, filesService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import './Tasks.css';
@@ -41,11 +43,18 @@ function Tasks({ currentUser, t, language }) {
     ]);
     const [showGroupView, setShowGroupView] = useState(false);
     const [showAddGroupModal, setShowAddGroupModal] = useState(false);
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [selectedTaskToComplete, setSelectedTaskToComplete] = useState(null);
+    const [completionFile, setCompletionFile] = useState(null);
+    const [completionNote, setCompletionNote] = useState('');
+    const [isUploading, setIsUploading] = useState(false);
+
     const [newGroupName, setNewGroupName] = useState('');
     const [draggedTask, setDraggedTask] = useState(null);
 
     // For EMPLOYEE, show only their tasks or department tasks
     const isEmployee = currentUser?.role === 'EMPLOYEE';
+    const isSales = currentUser?.role === 'ADMIN' || currentUser?.role === 'SALES_MANAGER' || currentUser?.role === 'SALES_REP';
 
     // Fetch data
     useEffect(() => {
@@ -61,6 +70,9 @@ function Tasks({ currentUser, t, language }) {
             if (isEmployee) {
                 // For employees - fetch their tasks
                 tasksRes = await tasksService.getMy();
+                // Ensure departments are loaded for filter
+                const deptsRes = await departmentsService.getAll();
+                if (deptsRes.success) setDepartments(deptsRes.data);
             } else {
                 // For admin/manager - fetch all tasks
                 tasksRes = await tasksService.getAll({ limit: 100 });
@@ -89,6 +101,49 @@ function Tasks({ currentUser, t, language }) {
     const showToast = (message, type = 'success') => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
+    };
+
+    const handleCompleteTask = (task) => {
+        setSelectedTaskToComplete(task);
+        setShowCompleteModal(true);
+        setCompletionFile(null);
+        setCompletionNote('');
+    };
+
+    const submitCompletion = async () => {
+        if (!selectedTaskToComplete) return;
+
+        try {
+            setIsUploading(true);
+
+            // 1. Upload file if exists
+            if (completionFile) {
+                const uploadRes = await filesService.upload(
+                    completionFile,
+                    'TASK_COMPLETION',
+                    selectedTaskToComplete.id
+                );
+                if (!uploadRes.success) {
+                    throw new Error('File upload failed');
+                }
+            }
+
+            // 2. Update task status
+            await tasksService.updateStatus(selectedTaskToComplete.id, 'COMPLETED');
+
+            // 3. Update local state
+            setTasks(tasks.map(t =>
+                t.id === selectedTaskToComplete.id ? { ...t, status: 'COMPLETED' } : t
+            ));
+
+            showToast(t?.('taskCompleted') || 'Task completed successfully', 'success');
+            setShowCompleteModal(false);
+        } catch (err) {
+            console.error('Completion failed:', err);
+            showToast(t?.('completionFailed') || 'Failed to complete task', 'error');
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     // Update task status
@@ -365,6 +420,12 @@ function Tasks({ currentUser, t, language }) {
                             <span className="customer-name">{task.orderItem?.order?.customer?.name || '-'}</span>
                         </div>
 
+                        {isSales && task.orderItem?.unitPrice && (
+                            <div className="task-price">
+                                <span>${(task.orderItem.unitPrice * (task.orderItem.quantity || 1)).toLocaleString()}</span>
+                            </div>
+                        )}
+
                         {task.notes && (
                             <p className="task-notes">{task.notes}</p>
                         )}
@@ -372,7 +433,7 @@ function Tasks({ currentUser, t, language }) {
                         <div className="task-footer">
                             <div className="task-duration">
                                 <Clock size={14} />
-                                {task.workflowStep?.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}
+                                {task.estimatedDuration || 1} {language === 'he' ? 'שעות' : 'hrs'}
                             </div>
 
                             {task.assignedTo ? (
@@ -388,7 +449,7 @@ function Tasks({ currentUser, t, language }) {
                             ) : (
                                 <button className="assign-btn" onClick={() => handleAssign(task.id, currentUser?.id)}>
                                     <User size={14} />
-                                    {language === 'he' ? 'הקצאה' : 'Assign'}
+                                    {language === 'he' ? 'לקחת' : 'Take'}
                                 </button>
                             )}
                         </div>
@@ -401,7 +462,7 @@ function Tasks({ currentUser, t, language }) {
                                     </button>
                                 )}
                                 {task.status === 'IN_PROGRESS' && (
-                                    <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(task.id, 'COMPLETED')}>
+                                    <button className="btn btn-success btn-sm" onClick={() => handleCompleteTask(task)}>
                                         {language === 'he' ? 'סיום משימה' : 'Complete'}
                                     </button>
                                 )}
@@ -820,6 +881,53 @@ function Tasks({ currentUser, t, language }) {
                         <button className="btn btn-primary" onClick={addGroup}>
                             <FolderPlus size={16} />
                             {language === 'he' ? 'צור קבוצה' : 'Create Group'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Complete Task Modal */}
+            <Modal isOpen={showCompleteModal} onClose={() => setShowCompleteModal(false)} title={language === 'he' ? 'סיום משימה' : 'Complete Task'} size="small">
+                <div className="complete-task-form">
+                    <p className="task-summary">
+                        {language === 'he' ? 'האם סיימת את המשימה' : 'Completing task'}: <strong>{selectedTaskToComplete?.workflowStep?.name || selectedTaskToComplete?.title}</strong>?
+                    </p>
+
+                    <div className="form-group">
+                        <label>{language === 'he' ? 'הערות סיכום' : 'Completion Notes'}</label>
+                        <textarea
+                            className="form-textarea"
+                            value={completionNote}
+                            onChange={(e) => setCompletionNote(e.target.value)}
+                            placeholder={language === 'he' ? 'הוסף הערות...' : 'Add notes...'}
+                        />
+                    </div>
+
+                    <div className="form-group file-upload-area">
+                        <label className="upload-label">
+                            <Upload size={24} />
+                            <span>{language === 'he' ? 'גרור קבצים או לחץ להעלאה' : 'Drag files or click to upload'}</span>
+                            <input
+                                type="file"
+                                className="hidden-input"
+                                onChange={(e) => setCompletionFile(e.target.files[0])}
+                            />
+                        </label>
+                        {completionFile && (
+                            <div className="selected-file">
+                                <File size={16} />
+                                <span>{completionFile.name}</span>
+                                <button className="remove-file" onClick={() => setCompletionFile(null)}>×</button>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="modal-actions">
+                        <button className="btn btn-outline" onClick={() => setShowCompleteModal(false)} disabled={isUploading}>
+                            {language === 'he' ? 'ביטול' : 'Cancel'}
+                        </button>
+                        <button className="btn btn-primary" onClick={submitCompletion} disabled={isUploading}>
+                            {isUploading ? 'Uploading...' : (language === 'he' ? 'סיים משימה' : 'Confirm Completion')}
                         </button>
                     </div>
                 </div>

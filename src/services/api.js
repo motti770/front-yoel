@@ -285,6 +285,10 @@ export const workflowsService = {
         return api.get(`/workflows/${id}`);
     },
 
+    getByProduct: async (productId) => {
+        return api.get(`/workflows/product/${productId}`);
+    },
+
     create: async (data) => {
         return api.post('/workflows', data);
     },
@@ -606,13 +610,15 @@ export const salesPipelineService = {
     },
 
     getProductPipeline: async (productId) => {
-        return api.get(`/products/${productId}/sales-pipeline`);
+        return api.get(`/sales-pipeline/product/${productId}`);
     },
 
     updateProductPipeline: async (productId, stages) => {
-        return api.put(`/products/${productId}/sales-pipeline`, { stages });
+        return api.put(`/sales-pipeline/product/${productId}`, { stages });
     }
 };
+
+
 
 // Export default api instance for custom calls
 export default api;
