@@ -381,10 +381,9 @@ function Leads({ currentUser, t, language }) {
             console.log('[Convert] Creating order...');
             const orderPayload = {
                 customerId: newCustomer.id,
-                status: 'NEW',
-                totalAmount: Number(selectedLead.estimatedValue) || 0,
-                title: `Order: ${selectedLead.name}`,
-                notes: `Converted from Lead. \nChecklist Verified: \n- Offer Accepted: Yes\n- Design Approved: Yes`
+                items: [], // Empty items array - order can be filled in later
+                notes: `Converted from Lead: ${selectedLead.name}\nEstimated Value: ₪${selectedLead.estimatedValue || 0}\nChecklist Verified:\n- Offer Accepted: Yes\n- Design Approved: Yes`,
+                dueDate: null
             };
 
             await ordersService.create(orderPayload);
