@@ -312,16 +312,24 @@ function Workflows({ currentUser, t, language }) {
     };
 
     const handleSaveStep = async () => {
+        console.log('[DEBUG] handleSaveStep called');
+        console.log('[DEBUG] stepFormData:', stepFormData);
+        console.log('[DEBUG] selectedWorkflow:', selectedWorkflow?.id, selectedWorkflow?.name);
+
         if (!stepFormData.name || !stepFormData.departmentId) {
+            console.log('[DEBUG] Validation failed - name or departmentId empty');
             showToast(language === 'he' ? 'נא למלא שדות חובה' : 'Please fill required fields', 'error');
             return;
         }
 
         try {
             setSaving(true);
+            console.log('[DEBUG] Starting save operation...');
 
             if (selectedStep) {
+                console.log('[DEBUG] Updating existing step:', selectedStep.id);
                 const result = await workflowsService.updateStep(selectedWorkflow.id, selectedStep.id, stepFormData);
+                console.log('[DEBUG] updateStep result:', result);
                 if (result.success) {
                     // Refresh workflow data
                     await fetchData();
@@ -331,7 +339,9 @@ function Workflows({ currentUser, t, language }) {
                     return;
                 }
             } else {
+                console.log('[DEBUG] Adding new step to workflow:', selectedWorkflow.id);
                 const result = await workflowsService.addStep(selectedWorkflow.id, stepFormData);
+                console.log('[DEBUG] addStep result:', result);
                 if (result.success) {
                     // Refresh workflow data
                     await fetchData();
@@ -343,6 +353,7 @@ function Workflows({ currentUser, t, language }) {
             }
             setShowStepModal(false);
         } catch (err) {
+            console.error('[DEBUG] Error in handleSaveStep:', err);
             showToast(err.error?.message || 'Failed to save step', 'error');
         } finally {
             setSaving(false);
