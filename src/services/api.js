@@ -299,6 +299,18 @@ export const workflowsService = {
 
     delete: async (id) => {
         return api.delete(`/workflows/${id}`);
+    },
+
+    addStep: async (workflowId, stepData) => {
+        return api.post(`/workflows/${workflowId}/steps`, stepData);
+    },
+
+    updateStep: async (workflowId, stepId, stepData) => {
+        return api.put(`/workflows/${workflowId}/steps/${stepId}`, stepData);
+    },
+
+    deleteStep: async (workflowId, stepId) => {
+        return api.delete(`/workflows/${workflowId}/steps/${stepId}`);
     }
 };
 
