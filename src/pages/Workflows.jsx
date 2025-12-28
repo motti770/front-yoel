@@ -108,6 +108,14 @@ function Workflows({ currentUser, t, language }) {
         setTimeout(() => setToast(null), 3000);
     };
 
+    // Auto-set departmentId when modal is open and departments become available
+    useEffect(() => {
+        if (showStepModal && !stepFormData.departmentId && departments.length > 0) {
+            console.log('[useEffect] Setting departmentId from departments:', departments[0].id);
+            setStepFormData(prev => ({ ...prev, departmentId: departments[0].id }));
+        }
+    }, [showStepModal, departments, stepFormData.departmentId]);
+
     // Sales Pipeline handlers
     const saveSalesStages = (stages) => {
         setSalesStages(stages);
@@ -286,10 +294,15 @@ function Workflows({ currentUser, t, language }) {
         const maxOrder = workflow.steps?.length > 0
             ? Math.max(...workflow.steps.map(s => s.stepOrder || 0)) + 1
             : 1;
+
+        // Get the first department ID - ensure it's available
+        const firstDeptId = departments.length > 0 ? departments[0].id : '';
+        console.log('[handleAddStep] departments available:', departments.length, 'firstDeptId:', firstDeptId);
+
         setStepFormData({
             name: '',
             description: '',
-            departmentId: departments[0]?.id || '',
+            departmentId: firstDeptId,
             stepOrder: maxOrder,
             estimatedDurationDays: 1,
             isActive: true
