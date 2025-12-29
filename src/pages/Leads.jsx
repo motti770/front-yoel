@@ -36,7 +36,7 @@ import {
     Sparkles,
     Layers
 } from 'lucide-react';
-import { leadsService, customersService, ordersService } from '../services/api';
+import { leadsService, customersService, ordersService, productsService, workflowsService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
@@ -78,6 +78,8 @@ const LEAD_SOURCES = {
 function Leads({ currentUser, t, language }) {
     // Data state
     const [leads, setLeads] = useState([]);
+    const [products, setProducts] = useState([]);
+    const [workflows, setWorkflows] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -112,26 +114,46 @@ function Leads({ currentUser, t, language }) {
         stage: 'NEW',
         estimatedValue: '',
         priority: 'MEDIUM', // Default priority
+        productId: '', // Product selection for workflow
         notes: '',
         nextFollowUp: ''
     });
 
-    // Fetch leads from API
+    // Fetch leads and related data from API
     const fetchLeads = async () => {
         try {
             setLoading(true);
             setError(null);
-            const result = await leadsService.getAll();
-            console.log('[Leads] API Response:', result);
 
-            if (result.success && result.data) {
+            // Fetch leads, products and workflows in parallel
+            const [leadsResult, productsResult, workflowsResult] = await Promise.all([
+                leadsService.getAll(),
+                productsService.getAll(),
+                workflowsService.getActive()
+            ]);
+
+            console.log('[Leads] API Response:', leadsResult);
+
+            if (leadsResult.success && leadsResult.data) {
                 // Handle both array and paginated response
-                const leadsData = Array.isArray(result.data) ? result.data : (result.data.items || result.data.leads || []);
+                const leadsData = Array.isArray(leadsResult.data) ? leadsResult.data : (leadsResult.data.items || leadsResult.data.leads || []);
                 setLeads(leadsData);
             } else {
                 // Fallback to empty array if no data
                 setLeads([]);
                 console.warn('[Leads] No leads data in response');
+            }
+
+            // Set products
+            if (productsResult.success && productsResult.data) {
+                const productsData = Array.isArray(productsResult.data) ? productsResult.data : productsResult.data.products || [];
+                setProducts(productsData);
+            }
+
+            // Set workflows
+            if (workflowsResult.success && workflowsResult.data) {
+                const workflowsData = Array.isArray(workflowsResult.data) ? workflowsResult.data : workflowsResult.data.workflows || [];
+                setWorkflows(workflowsData);
             }
         } catch (err) {
             console.error('[Leads] Failed to fetch:', err);
@@ -202,6 +224,7 @@ function Leads({ currentUser, t, language }) {
             source: lead.source || 'WEBSITE',
             stage: lead.stage || 'NEW',
             estimatedValue: lead.estimatedValue || '',
+            productId: lead.productId || '',
             notes: lead.notes || '',
             nextFollowUp: lead.nextFollowUp || ''
         });
@@ -218,6 +241,7 @@ function Leads({ currentUser, t, language }) {
             source: 'WEBSITE',
             stage: 'NEW',
             estimatedValue: '',
+            productId: '',
             notes: '',
             nextFollowUp: ''
         });
@@ -232,18 +256,54 @@ function Leads({ currentUser, t, language }) {
 
         try {
             setSaving(true);
+
+            // Prepare payload with proper data types
+            const payload = {
+                name: formData.name,
+                email: formData.email,
+                source: formData.source,
+                stage: formData.stage,
+                estimatedValue: formData.estimatedValue ? Number(formData.estimatedValue) : 0
+            };
+
+            // Add optional fields only if they have values
+            if (formData.phone && formData.phone.trim()) {
+                payload.phone = formData.phone.trim();
+            }
+            if (formData.company && formData.company.trim()) {
+                payload.company = formData.company.trim();
+            }
+            if (formData.notes && formData.notes.trim()) {
+                payload.notes = formData.notes.trim();
+            }
+            if (formData.nextFollowUp && formData.nextFollowUp.trim()) {
+                payload.nextFollowUp = formData.nextFollowUp.trim();
+            }
+            if (formData.productId && formData.productId.trim()) {
+                payload.productId = formData.productId.trim();
+            }
+
+            // Remove undefined values
+            Object.keys(payload).forEach(key => {
+                if (payload[key] === undefined) {
+                    delete payload[key];
+                }
+            });
+
+            console.log('[Leads] Saving lead with payload:', payload);
+
             if (selectedLead) {
                 // Update existing lead
-                const result = await leadsService.update(selectedLead.id, formData);
+                const result = await leadsService.update(selectedLead.id, payload);
                 if (result.success) {
-                    setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, ...formData } : l));
+                    setLeads(leads.map(l => l.id === selectedLead.id ? { ...l, ...payload } : l));
                     showToast(language === 'he' ? 'ליד עודכן' : 'Lead updated');
                 } else {
                     throw new Error(result.error?.message || 'Failed to update');
                 }
             } else {
                 // Create new lead
-                const result = await leadsService.create(formData);
+                const result = await leadsService.create(payload);
                 if (result.success && result.data) {
                     setLeads([result.data, ...leads]);
                     showToast(language === 'he' ? 'ליד נוסף' : 'Lead added');
@@ -381,10 +441,9 @@ function Leads({ currentUser, t, language }) {
             console.log('[Convert] Creating order...');
             const orderPayload = {
                 customerId: newCustomer.id,
-                status: 'NEW',
-                totalAmount: Number(selectedLead.estimatedValue) || 0,
-                title: `Order: ${selectedLead.name}`,
-                notes: `Converted from Lead. \nChecklist Verified: \n- Offer Accepted: Yes\n- Design Approved: Yes`
+                items: [], // Empty items array - order can be filled in later
+                notes: `Converted from Lead: ${selectedLead.name}\nEstimated Value: ₪${selectedLead.estimatedValue || 0}\nChecklist Verified:\n- Offer Accepted: Yes\n- Design Approved: Yes`,
+                dueDate: null
             };
 
             await ordersService.create(orderPayload);
@@ -680,6 +739,14 @@ function Leads({ currentUser, t, language }) {
                     </div>
                     <h4>{lead.name}</h4>
                     <p className="company">{lead.company || '-'}</p>
+                    {lead.productId && (() => {
+                        const product = products.find(p => p.id === lead.productId);
+                        return product ? (
+                            <p style={{ fontSize: '0.85rem', opacity: 0.7, marginTop: '4px' }}>
+                                📦 {product.name}
+                            </p>
+                        ) : null;
+                    })()}
                     <div className="card-stats">
                         <div className="stat">
                             <span className="stat-value">₪{(Number(lead.estimatedValue) || 0).toLocaleString()}</span>
@@ -1037,6 +1104,22 @@ function Leads({ currentUser, t, language }) {
                             </select>
                         </div>
                         <div className="form-group">
+                            <label>{language === 'he' ? 'מוצר מעוניין' : 'Interested Product'}</label>
+                            <select
+                                className="form-input"
+                                value={formData.productId}
+                                onChange={(e) => setFormData({ ...formData, productId: e.target.value })}
+                            >
+                                <option value="">{language === 'he' ? 'ללא מוצר ספציפי' : 'No specific product'}</option>
+                                {products.map(product => (
+                                    <option key={product.id} value={product.id}>{product.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="form-row">
+                        <div className="form-group">
                             <label>{language === 'he' ? 'שלב' : 'Stage'}</label>
                             <select
                                 className="form-input"
@@ -1177,60 +1260,144 @@ function Leads({ currentUser, t, language }) {
                             borderRadius: '12px'
                         }}>
                             <h4 style={{ marginBottom: '16px', fontSize: '0.9rem', opacity: 0.7 }}>
-                                {language === 'he' ? 'מיקום בתהליך' : 'Pipeline Position'}
+                                {language === 'he' ? 'תהליך המכירה' : 'Sales Process'}
                             </h4>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '8px' }}>
-                                {Object.values(LEAD_STAGES).filter(s => s.id !== 'LOST').map((stage, index, arr) => {
-                                    const stageOrder = ['NEW', 'CONTACT', 'MEETING', 'NEGOTIATION', 'WON'];
-                                    const currentIndex = stageOrder.indexOf(selectedLead.stage);
-                                    const thisIndex = stageOrder.indexOf(stage.id);
-                                    const isPast = thisIndex < currentIndex;
-                                    const isCurrent = stage.id === selectedLead.stage;
-                                    const isLast = index === arr.length - 1;
+                            {(() => {
+                                // Get the product and its workflow
+                                const leadProduct = products.find(p => p.id === selectedLead.productId);
+                                const productWorkflow = leadProduct ? workflows.find(w => w.id === leadProduct.workflowId) : null;
+
+                                // If product has workflow, show workflow steps
+                                if (productWorkflow && productWorkflow.steps && productWorkflow.steps.length > 0) {
+                                    const sortedSteps = [...productWorkflow.steps].sort((a, b) => a.order - b.order);
 
                                     return (
-                                        <div key={stage.id} style={{ display: 'flex', alignItems: 'center', flex: isLast ? '0 0 auto' : '1 1 0' }}>
-                                            <div style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                borderRadius: '50%',
-                                                background: isCurrent ? stage.color : isPast ? stage.color : 'rgba(255,255,255,0.1)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                opacity: isPast || isCurrent ? 1 : 0.4,
-                                                border: isCurrent ? '3px solid white' : 'none',
-                                                boxShadow: isCurrent ? '0 0 12px ' + stage.color : 'none',
-                                                transition: 'all 0.3s'
-                                            }}>
-                                                {isPast ? <Check size={14} /> : <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{index + 1}</span>}
+                                        <>
+                                            <div style={{ marginBottom: '12px', fontSize: '0.85rem', opacity: 0.8 }}>
+                                                <strong>{language === 'he' ? 'מוצר:' : 'Product:'}</strong> {leadProduct.name}
                                             </div>
-                                            {!isLast && (
-                                                <div style={{
-                                                    flex: 1,
-                                                    height: '3px',
-                                                    background: isPast ? stage.color : 'rgba(255,255,255,0.1)',
-                                                    marginInline: '4px',
-                                                    borderRadius: '2px',
-                                                    transition: 'all 0.3s'
-                                                }} />
-                                            )}
-                                        </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto', paddingBottom: '8px' }}>
+                                                {sortedSteps.map((step, index) => {
+                                                    // Find current step index
+                                                    const currentStepIndex = sortedSteps.findIndex(s => s.id === selectedLead.stage || s.name === selectedLead.stage);
+                                                    const isPast = index < currentStepIndex;
+                                                    const isCurrent = index === currentStepIndex;
+                                                    const isLast = index === sortedSteps.length - 1;
+
+                                                    return (
+                                                        <div key={step.id} style={{ display: 'flex', alignItems: 'center', flex: isLast ? '0 0 auto' : '1 1 0' }}>
+                                                            <div style={{
+                                                                minWidth: '36px',
+                                                                height: '36px',
+                                                                borderRadius: '50%',
+                                                                background: isCurrent ? '#4facfe' : isPast ? '#00c853' : 'rgba(255,255,255,0.1)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                opacity: isPast || isCurrent ? 1 : 0.4,
+                                                                border: isCurrent ? '3px solid white' : 'none',
+                                                                boxShadow: isCurrent ? '0 0 12px #4facfe' : 'none',
+                                                                transition: 'all 0.3s',
+                                                                position: 'relative'
+                                                            }}>
+                                                                {isPast ? <Check size={16} /> : <span style={{ fontSize: '11px', fontWeight: 'bold' }}>{index + 1}</span>}
+                                                            </div>
+                                                            {!isLast && (
+                                                                <div style={{
+                                                                    flex: 1,
+                                                                    height: '3px',
+                                                                    background: isPast ? '#00c853' : 'rgba(255,255,255,0.1)',
+                                                                    marginInline: '8px',
+                                                                    borderRadius: '2px',
+                                                                    transition: 'all 0.3s'
+                                                                }} />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.75rem', opacity: 0.7, gap: '4px' }}>
+                                                {sortedSteps.map((step, index) => {
+                                                    const currentStepIndex = sortedSteps.findIndex(s => s.id === selectedLead.stage || s.name === selectedLead.stage);
+                                                    const isCurrent = index === currentStepIndex;
+
+                                                    return (
+                                                        <span key={step.id} style={{
+                                                            textAlign: 'center',
+                                                            flex: 1,
+                                                            fontWeight: isCurrent ? 'bold' : 'normal',
+                                                            color: isCurrent ? '#4facfe' : 'inherit'
+                                                        }}>
+                                                            {step.name}
+                                                        </span>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
                                     );
-                                })}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', opacity: 0.6 }}>
-                                {Object.values(LEAD_STAGES).filter(s => s.id !== 'LOST').map(stage => (
-                                    <span key={stage.id} style={{
-                                        textAlign: 'center',
-                                        flex: 1,
-                                        fontWeight: stage.id === selectedLead.stage ? 'bold' : 'normal',
-                                        color: stage.id === selectedLead.stage ? stage.color : 'inherit'
-                                    }}>
-                                        {stage.label[language]}
-                                    </span>
-                                ))}
-                            </div>
+                                } else {
+                                    // Default generic stages
+                                    return (
+                                        <>
+                                            <div style={{ marginBottom: '12px', fontSize: '0.85rem', opacity: 0.6 }}>
+                                                {language === 'he' ? 'שלבים כלליים (לא מחובר למוצר)' : 'Generic stages (no product linked)'}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '8px' }}>
+                                                {Object.values(LEAD_STAGES).filter(s => s.id !== 'LOST').map((stage, index, arr) => {
+                                                    const stageOrder = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL', 'NEGOTIATION', 'WON'];
+                                                    const currentIndex = stageOrder.indexOf(selectedLead.stage);
+                                                    const thisIndex = stageOrder.indexOf(stage.id);
+                                                    const isPast = thisIndex < currentIndex;
+                                                    const isCurrent = stage.id === selectedLead.stage;
+                                                    const isLast = index === arr.length - 1;
+
+                                                    return (
+                                                        <div key={stage.id} style={{ display: 'flex', alignItems: 'center', flex: isLast ? '0 0 auto' : '1 1 0' }}>
+                                                            <div style={{
+                                                                width: '32px',
+                                                                height: '32px',
+                                                                borderRadius: '50%',
+                                                                background: isCurrent ? stage.color : isPast ? stage.color : 'rgba(255,255,255,0.1)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                opacity: isPast || isCurrent ? 1 : 0.4,
+                                                                border: isCurrent ? '3px solid white' : 'none',
+                                                                boxShadow: isCurrent ? '0 0 12px ' + stage.color : 'none',
+                                                                transition: 'all 0.3s'
+                                                            }}>
+                                                                {isPast ? <Check size={14} /> : <span style={{ fontSize: '10px', fontWeight: 'bold' }}>{index + 1}</span>}
+                                                            </div>
+                                                            {!isLast && (
+                                                                <div style={{
+                                                                    flex: 1,
+                                                                    height: '3px',
+                                                                    background: isPast ? stage.color : 'rgba(255,255,255,0.1)',
+                                                                    marginInline: '4px',
+                                                                    borderRadius: '2px',
+                                                                    transition: 'all 0.3s'
+                                                                }} />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '0.75rem', opacity: 0.6 }}>
+                                                {Object.values(LEAD_STAGES).filter(s => s.id !== 'LOST').map(stage => (
+                                                    <span key={stage.id} style={{
+                                                        textAlign: 'center',
+                                                        flex: 1,
+                                                        fontWeight: stage.id === selectedLead.stage ? 'bold' : 'normal',
+                                                        color: stage.id === selectedLead.stage ? stage.color : 'inherit'
+                                                    }}>
+                                                        {stage.label[language]}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </>
+                                    );
+                                }
+                            })()}
                         </div>
 
                         {selectedLead.notes && (
