@@ -1,3 +1,64 @@
+/**
+ * BulkImporter Component
+ *
+ * A comprehensive, multi-step file import wizard that handles various file formats
+ * and provides intelligent field mapping, data validation, and progress tracking.
+ *
+ * @component
+ *
+ * @description
+ * This component provides a complete data import workflow with four main steps:
+ * 1. **Upload**: Drag-and-drop or file picker for multiple file formats
+ * 2. **Mapping**: Intelligent auto-mapping of source columns to target fields
+ * 3. **Preview**: Visual validation of mapped data with error highlighting
+ * 4. **Import**: Batch import with real-time progress tracking and error reporting
+ *
+ * @features
+ * - Multi-format support: CSV, Excel (.xlsx, .xls), JSON, Images, PDF
+ * - Intelligent auto-mapping with three strategies:
+ *   - Common field name aliases (e.g., "email", "e-mail", "mail")
+ *   - Exact case-insensitive key matching
+ *   - Fuzzy matching based on substring containment
+ * - Real-time data validation with required field checking
+ * - Batch import with progress tracking
+ * - Bilingual support (Hebrew/English)
+ * - Comprehensive error handling and reporting
+ * - Sample file downloads for user guidance
+ *
+ * @example
+ * ```jsx
+ * <BulkImporter
+ *   entityType="customers"
+ *   targetFields={[
+ *     { key: 'name', label: 'Full Name', type: 'text', required: true },
+ *     { key: 'email', label: 'Email', type: 'email', required: true },
+ *     { key: 'phone', label: 'Phone', type: 'tel', required: false }
+ *   ]}
+ *   onImport={async (row) => {
+ *     // Process the row data
+ *     const result = await api.customers.create(row);
+ *     return result;
+ *   }}
+ *   language="he"
+ *   onClose={() => setShowImporter(false)}
+ * />
+ * ```
+ *
+ * @param {Object} props - Component props
+ * @param {string} [props.entityType='customers'] - Type of entity being imported (customers, products, orders)
+ * @param {Array<{key: string, label: string, type: string, required: boolean}>} props.targetFields -
+ *   Array of target field definitions that the imported data will be mapped to
+ * @param {Function} props.onImport - Async callback function to handle importing each row.
+ *   Should return a result object with optional `_action: 'updated'` property if the row was updated rather than created.
+ * @param {string} [props.language='he'] - UI language ('he' for Hebrew, 'en' for English)
+ * @param {Function} [props.onClose] - Callback function when the importer is closed
+ *
+ * @returns {JSX.Element} A modal-style import wizard interface
+ *
+ * @author Front Yoel System
+ * @since 1.0.0
+ */
+
 import { useState, useRef, useCallback } from 'react';
 import {
     Upload,
@@ -26,7 +87,10 @@ import {
 import * as XLSX from 'xlsx';
 import './BulkImporter.css';
 
-// Supported file types
+/**
+ * Supported file types configuration
+ * @constant {Object}
+ */
 const SUPPORTED_TYPES = {
     spreadsheet: ['.csv', '.xlsx', '.xls'],
     json: ['.json'],
@@ -34,9 +98,17 @@ const SUPPORTED_TYPES = {
     document: ['.pdf']
 };
 
+/**
+ * Flattened array of all supported file extensions
+ * @constant {string[]}
+ */
 const ALL_TYPES = [...SUPPORTED_TYPES.spreadsheet, ...SUPPORTED_TYPES.json, ...SUPPORTED_TYPES.image, ...SUPPORTED_TYPES.document];
 
-// Step indicators
+/**
+ * Step definitions for the import wizard
+ * Each step has an ID, internal name, and bilingual label
+ * @constant {Array<{id: number, name: string, label: {he: string, en: string}}>}
+ */
 const STEPS = [
     { id: 1, name: 'upload', label: { he: 'העלאת קובץ', en: 'Upload File' } },
     { id: 2, name: 'mapping', label: { he: 'התאמת שדות', en: 'Field Mapping' } },
@@ -137,7 +209,12 @@ function BulkImporter({
 
     const t = labels[language] || labels.he;
 
-    // File type detection
+    /**
+     * Detects file type based on file extension
+     *
+     * @param {string} filename - The name of the file including extension
+     * @returns {string|null} File type category ('spreadsheet', 'json', 'image', 'document') or null if unsupported
+     */
     const getFileType = (filename) => {
         const ext = '.' + filename.split('.').pop().toLowerCase();
         if (SUPPORTED_TYPES.spreadsheet.includes(ext)) return 'spreadsheet';
@@ -147,7 +224,19 @@ function BulkImporter({
         return null;
     };
 
-    // Process uploaded file
+    /**
+     * Main file processing router that delegates to format-specific processors
+     *
+     * This function:
+     * 1. Validates the file type
+     * 2. Sets the file state
+     * 3. Routes to appropriate processor based on file type
+     * 4. Handles processing errors
+     *
+     * @async
+     * @param {File} uploadedFile - The File object from the browser's file input or drag-drop
+     * @throws {Error} If file type is unsupported or processing fails
+     */
     const processFile = async (uploadedFile) => {
         setError(null);
         const type = getFileType(uploadedFile.name);
@@ -175,7 +264,25 @@ function BulkImporter({
         }
     };
 
-    // Process JSON
+    /**
+     * Processes JSON files and extracts data arrays
+     *
+     * Handles various JSON structures:
+     * - Direct array: `[{...}, {...}]`
+     * - Wrapped in 'data' property: `{data: [{...}]}`
+     * - Wrapped in 'items' property: `{items: [{...}]}`
+     * - Single object: `{...}` (wrapped in array)
+     *
+     * After parsing, automatically:
+     * 1. Extracts all unique keys as source columns
+     * 2. Triggers auto-mapping
+     * 3. Advances to mapping step
+     *
+     * @async
+     * @param {File} file - The JSON file to process
+     * @returns {Promise<void>}
+     * @throws {Error} If JSON is invalid or contains no data
+     */
     const processJSON = async (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -217,7 +324,31 @@ function BulkImporter({
         });
     };
 
-    // Process spreadsheet (CSV/Excel)
+    /**
+     * Processes spreadsheet files (CSV, Excel .xlsx/.xls) using SheetJS library
+     *
+     * Processing steps:
+     * 1. Reads file as ArrayBuffer
+     * 2. Parses with XLSX library
+     * 3. Extracts first sheet
+     * 4. Converts to JSON format with first row as headers
+     * 5. Filters empty rows
+     * 6. Transforms row arrays into objects with headers as keys
+     * 7. Triggers auto-mapping and advances to mapping step
+     *
+     * @async
+     * @param {File} file - The spreadsheet file (CSV, XLSX, or XLS)
+     * @returns {Promise<void>}
+     * @throws {Error} If file has no data or parsing fails
+     *
+     * @example
+     * // Input CSV:
+     * // Name,Email,Phone
+     * // John Doe,john@example.com,555-1234
+     * //
+     * // Produces:
+     * // [{Name: 'John Doe', Email: 'john@example.com', Phone: '555-1234'}]
+     */
     const processSpreadsheet = async (file) => {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -271,7 +402,14 @@ function BulkImporter({
         });
     };
 
-    // Process image
+    /**
+     * Processes image files by creating a single-row dataset
+     *
+     * Images are treated as single entities with fileName and imageFile properties.
+     * The file object is preserved for later upload or processing.
+     *
+     * @param {File} file - The image file (JPG, PNG, GIF, WEBP)
+     */
     const processImage = (file) => {
         // For images, we create a single row with the image
         setRawData([{ imageFile: file, fileName: file.name }]);
@@ -279,7 +417,14 @@ function BulkImporter({
         setCurrentStep(2);
     };
 
-    // Process PDF
+    /**
+     * Processes PDF files by creating a single-row dataset
+     *
+     * PDFs require server-side processing for text extraction.
+     * This function prepares the file for upload and further processing.
+     *
+     * @param {File} file - The PDF file
+     */
     const processPDF = (file) => {
         // For PDFs, we note that we need server-side processing
         setRawData([{ pdfFile: file, fileName: file.name }]);
@@ -287,7 +432,14 @@ function BulkImporter({
         setCurrentStep(2);
     };
 
-    // Common column aliases for auto-mapping
+    /**
+     * Predefined mapping of common field keys to their typical column name variations
+     *
+     * This lookup table supports multiple languages (English, Hebrew) and common variations
+     * to improve auto-mapping accuracy. Used as the first strategy in autoMapFields().
+     *
+     * @constant {Object<string, string[]>}
+     */
     const COMMON_MAPPINGS = {
         name: ['name', 'full name', 'fullname', 'שם', 'שם מלא', 'first name', 'firstName'],
         email: ['email', 'e-mail', 'mail', 'אימייל', 'דואר אלקטרוני'],
@@ -298,7 +450,38 @@ function BulkImporter({
         estimatedValue: ['value', 'amount', 'estimated value', 'deal value', 'שווי', 'סכום', 'ערך']
     };
 
-    // Auto-map fields based on column name similarity and common aliases
+    /**
+     * Intelligently maps source columns to target fields using multiple strategies
+     *
+     * This is the core auto-mapping algorithm with three cascading strategies:
+     *
+     * **Strategy 1: Common Mappings Lookup**
+     * - Checks if field key exists in COMMON_MAPPINGS
+     * - Searches for any column name that matches predefined aliases
+     * - Example: 'email' field matches columns: "email", "e-mail", "mail", "אימייל"
+     *
+     * **Strategy 2: Exact Key Match (Case Insensitive)**
+     * - Direct comparison between field key and column name
+     * - Example: 'name' field matches "Name", "NAME", "name"
+     *
+     * **Strategy 3: Fuzzy Match (Substring Containment)**
+     * - Checks if field key is contained in column name or vice versa
+     * - Also checks against field label for better matching
+     * - Example: 'phone' field matches "customer_phone", "phone_number"
+     *
+     * **Important Notes:**
+     * - Each column can only be mapped once (tracked via usedColumns Set)
+     * - Strategies are tried in order; first match wins
+     * - Case-insensitive matching throughout
+     * - Automatically updates fieldMappings state
+     *
+     * @param {string[]} columns - Array of source column names from the uploaded file
+     *
+     * @example
+     * // Given targetFields: [{key: 'email', label: 'Email Address'}, {key: 'name', ...}]
+     * // And columns: ['User Email', 'Full Name', 'Phone']
+     * // Results in mappings: {email: 'User Email', name: 'Full Name'}
+     */
     const autoMapFields = (columns) => {
         const mappings = {};
         const usedColumns = new Set();
@@ -346,7 +529,12 @@ function BulkImporter({
         setFieldMappings(mappings);
     };
 
-    // Handle field mapping change
+    /**
+     * Updates field mapping when user manually changes a mapping in the UI
+     *
+     * @param {string} targetField - The target field key being mapped
+     * @param {string} sourceColumn - The source column name to map to (empty string to unmap)
+     */
     const handleMappingChange = (targetField, sourceColumn) => {
         setFieldMappings(prev => ({
             ...prev,
@@ -354,7 +542,24 @@ function BulkImporter({
         }));
     };
 
-    // Get mapped data for preview/import
+    /**
+     * Transforms raw data into mapped format with validation status
+     *
+     * This function:
+     * 1. Iterates through all raw data rows
+     * 2. Maps source columns to target fields based on current fieldMappings
+     * 3. Validates that all required fields have values
+     * 4. Adds metadata: _rowIndex (1-based) and _isValid (boolean)
+     *
+     * @returns {Array<Object>} Array of mapped objects with validation metadata
+     *
+     * @example
+     * // Returns:
+     * // [
+     * //   {_rowIndex: 1, _isValid: true, name: 'John', email: 'john@example.com'},
+     * //   {_rowIndex: 2, _isValid: false, name: '', email: 'jane@example.com'}
+     * // ]
+     */
     const getMappedData = useCallback(() => {
         return rawData.map((row, index) => {
             const mappedRow = { _rowIndex: index + 1 };
@@ -376,7 +581,11 @@ function BulkImporter({
         });
     }, [rawData, fieldMappings, targetFields]);
 
-    // Count valid/invalid rows
+    /**
+     * Calculates statistics about mapped data for display purposes
+     *
+     * @returns {{total: number, valid: number, invalid: number}} Row count statistics
+     */
     const getRowCounts = useCallback(() => {
         const mapped = getMappedData();
         const valid = mapped.filter(r => r._isValid).length;
@@ -384,7 +593,34 @@ function BulkImporter({
         return { total: mapped.length, valid, invalid };
     }, [getMappedData]);
 
-    // Handle import
+    /**
+     * Executes the batch import process with progress tracking and error handling
+     *
+     * **Process Flow:**
+     * 1. Filters to only valid rows (rows where all required fields have values)
+     * 2. Iterates through each row sequentially
+     * 3. Removes internal metadata fields (_rowIndex, _isValid)
+     * 4. Calls onImport callback for each row
+     * 5. Tracks success/updated/failed counts
+     * 6. Updates progress percentage after each row
+     * 7. Collects error details for failed rows
+     * 8. Advances to results step (step 4)
+     *
+     * **Result Tracking:**
+     * - `success`: Rows that were newly created
+     * - `updated`: Rows that updated existing records (identified by `_action: 'updated'` in callback result)
+     * - `failed`: Rows that threw errors during import
+     * - `errors`: Array of {row: number, error: string} for failed imports
+     *
+     * @async
+     * @returns {Promise<void>}
+     *
+     * @example
+     * // onImport callback should return result indicating action taken:
+     * // {_action: 'updated'} - for updates
+     * // {} or any other object - for new creations
+     * // throw Error - for failures
+     */
     const handleImport = async () => {
         setImporting(true);
         setImportProgress(0);
@@ -433,16 +669,26 @@ function BulkImporter({
         }
     };
 
-    // Drag & Drop handlers
+    /**
+     * Handles drag over event for drag-and-drop file upload
+     * @param {DragEvent} e - The drag event
+     */
     const handleDragOver = (e) => {
         e.preventDefault();
         setIsDragging(true);
     };
 
+    /**
+     * Handles drag leave event to reset drag state
+     */
     const handleDragLeave = () => {
         setIsDragging(false);
     };
 
+    /**
+     * Handles file drop event and processes the dropped file
+     * @param {DragEvent} e - The drop event containing file data
+     */
     const handleDrop = (e) => {
         e.preventDefault();
         setIsDragging(false);
@@ -453,6 +699,10 @@ function BulkImporter({
         }
     };
 
+    /**
+     * Handles file selection from file input element
+     * @param {Event} e - The change event from file input
+     */
     const handleFileSelect = (e) => {
         const selectedFile = e.target.files[0];
         if (selectedFile) {
@@ -460,7 +710,10 @@ function BulkImporter({
         }
     };
 
-    // Render step indicator
+    /**
+     * Renders the step indicator component showing progress through the wizard
+     * @returns {JSX.Element} Step indicator UI
+     */
     const renderStepIndicator = () => (
         <div className="step-indicator">
             {STEPS.map((step, index) => (
@@ -478,7 +731,10 @@ function BulkImporter({
         </div>
     );
 
-    // Render upload step
+    /**
+     * Renders Step 1: File upload interface with drag-and-drop
+     * @returns {JSX.Element} Upload step UI
+     */
     const renderUploadStep = () => (
         <div className="upload-step">
             <div
@@ -569,7 +825,11 @@ function BulkImporter({
         </div>
     );
 
-    // Render mapping step
+    /**
+     * Renders Step 2: Field mapping interface with auto-mapping button
+     * Shows required and optional fields with dropdown selectors for source columns
+     * @returns {JSX.Element} Mapping step UI
+     */
     const renderMappingStep = () => {
         const requiredFields = targetFields.filter(f => f.required);
         const optionalFields = targetFields.filter(f => !f.required);
@@ -659,7 +919,11 @@ function BulkImporter({
         );
     };
 
-    // Render preview step
+    /**
+     * Renders Step 3: Data preview with validation status
+     * Shows statistics and table preview (first 50 rows) with valid/invalid indicators
+     * @returns {JSX.Element} Preview step UI
+     */
     const renderPreviewStep = () => {
         const mappedData = getMappedData();
         const counts = getRowCounts();
@@ -725,7 +989,11 @@ function BulkImporter({
         );
     };
 
-    // Render import step (progress/results)
+    /**
+     * Renders Step 4: Import progress and results
+     * Shows spinner during import, then displays success/failure statistics
+     * @returns {JSX.Element} Import step UI
+     */
     const renderImportStep = () => (
         <div className="import-step">
             {importing ? (
@@ -785,7 +1053,10 @@ function BulkImporter({
         </div>
     );
 
-    // Render current step content
+    /**
+     * Routes to the appropriate render function based on current step
+     * @returns {JSX.Element|null} Current step UI component
+     */
     const renderStepContent = () => {
         switch (currentStep) {
             case 1: return renderUploadStep();
@@ -796,7 +1067,16 @@ function BulkImporter({
         }
     };
 
-    // Can proceed to next step?
+    /**
+     * Validates whether user can proceed to the next step
+     *
+     * Validation rules by step:
+     * - Step 1 (Upload): File must be selected and data extracted
+     * - Step 2 (Mapping): All required fields must be mapped
+     * - Step 3 (Preview): At least one valid row must exist
+     *
+     * @returns {boolean} True if user can proceed, false otherwise
+     */
     const canProceed = () => {
         switch (currentStep) {
             case 1: return file && rawData.length > 0;
