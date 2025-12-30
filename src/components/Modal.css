@@ -83,6 +83,11 @@
     flex: 1;
 }
 
+.modal-content.xlarge .modal-body {
+    padding: 0;
+    overflow-y: auto;
+}
+
 /* Form Styles inside Modal */
 .modal-form {
     display: flex;

@@ -95,6 +95,23 @@
     height: 100%;
 }
 
+.task-dependency {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 193, 7, 0.1);
+    border-left: 3px solid #ffc107;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #ff9800;
+    margin-top: 0.5rem;
+}
+
+.task-dependency svg {
+    flex-shrink: 0;
+}
+
 .task-header {
     display: flex;
     align-items: center;

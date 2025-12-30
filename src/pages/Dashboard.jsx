@@ -336,7 +336,7 @@ function Dashboard({ currentUser, t, language }) {
                                     <div className="task-content">
                                         <h4>{task.title || (task.workflowStep?.name + ' - ' + task.orderItem?.product?.name)}</h4>
                                         <span className="task-customer">
-                                            {task.department?.name || 'General'} | {task.assignee ? (task.assignee.firstName + ' ' + task.assignee.lastName) : 'Unassigned'}
+                                            {task.department?.name || 'General'} | {task.assignedTo ? (task.assignedTo.firstName + ' ' + task.assignedTo.lastName) : 'Unassigned'}
                                         </span>
                                     </div>
                                     <div className="task-badge" style={{

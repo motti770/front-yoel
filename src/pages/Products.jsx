@@ -71,6 +71,10 @@ function Products({ currentUser, t, language }) {
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState(null);
 
+    // Bulk selection state
+    const [selectedProducts, setSelectedProducts] = useState([]);
+    const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+
     // Form state
     const [formData, setFormData] = useState({
         name: '',
@@ -198,6 +202,63 @@ function Products({ currentUser, t, language }) {
     const handleDeleteClick = (product) => {
         setSelectedProduct(product);
         setShowDeleteModal(true);
+    };
+
+    // Bulk selection handlers
+    const toggleProductSelection = (productId) => {
+        setSelectedProducts(prev =>
+            prev.includes(productId)
+                ? prev.filter(id => id !== productId)
+                : [...prev, productId]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedProducts.length === filteredProducts.length) {
+            setSelectedProducts([]);
+        } else {
+            setSelectedProducts(filteredProducts.map(p => p.id));
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        try {
+            setSaving(true);
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const productId of selectedProducts) {
+                try {
+                    const result = await productsService.delete(productId);
+                    if (result.success) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (err) {
+                    failCount++;
+                }
+            }
+
+            // Refresh products list
+            await fetchProducts();
+
+            setSelectedProducts([]);
+            setShowBulkDeleteModal(false);
+
+            if (failCount === 0) {
+                showToast(language === 'he' ? `${successCount} מוצרים נמחקו בהצלחה` : `${successCount} products deleted successfully`);
+            } else {
+                const message = language === 'he'
+                    ? `${successCount} נמחקו בהצלחה. ${failCount} לא ניתן למחוק (ככל הנראה יש להם הזמנות קיימות)`
+                    : `${successCount} deleted successfully. ${failCount} couldn't be deleted (likely have existing orders)`;
+                showToast(message, 'warning');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to delete products', 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleSave = async () => {
@@ -413,6 +474,13 @@ function Products({ currentUser, t, language }) {
         <div className="products-grid">
             {filteredProducts.map(product => (
                 <div key={product.id} className="product-card glass-card" onClick={() => handleView(product)}>
+                    <div className="product-card-checkbox" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }}>
+                        <input
+                            type="checkbox"
+                            checked={selectedProducts.includes(product.id)}
+                            onChange={() => {}}
+                        />
+                    </div>
                     <div className={`product-image ${product.imageUrl ? 'has-image' : ''}`}>
                         {product.imageUrl ? (
                             <img
@@ -803,9 +871,21 @@ function Products({ currentUser, t, language }) {
             <div className="page-header">
                 <div className="header-info">
                     <h2>{t?.('products') || 'Products'}</h2>
-                    <p>{filteredProducts.length} {t?.('products') || 'products'}</p>
+                    <p>
+                        {filteredProducts.length} {t?.('products') || 'products'}
+                        {selectedProducts.length > 0 && ` • ${selectedProducts.length} ${language === 'he' ? 'נבחרו' : 'selected'}`}
+                    </p>
                 </div>
                 <div className="header-actions">
+                    {selectedProducts.length > 0 && (
+                        <button
+                            className="btn btn-danger"
+                            onClick={() => setShowBulkDeleteModal(true)}
+                        >
+                            <Trash2 size={18} />
+                            {language === 'he' ? `מחק ${selectedProducts.length} נבחרים` : `Delete ${selectedProducts.length} selected`}
+                        </button>
+                    )}
                     <button
                         className={`btn btn-outline groups-btn ${showGroupView ? 'active' : ''}`}
                         onClick={() => setShowGroupView(!showGroupView)}
@@ -843,6 +923,14 @@ function Products({ currentUser, t, language }) {
             {/* Filters */}
             <div className="toolbar glass-card">
                 <div className="toolbar-right">
+                    <div className="select-all-checkbox" style={{ marginRight: '1rem' }}>
+                        <input
+                            type="checkbox"
+                            checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                            onChange={toggleSelectAll}
+                        />
+                        <label>{language === 'he' ? 'בחר הכל' : 'Select All'}</label>
+                    </div>
                     <div className="search-input">
                         <Search size={18} />
                         <input
@@ -989,6 +1077,30 @@ function Products({ currentUser, t, language }) {
                         <button className="btn btn-danger" onClick={handleDelete} disabled={saving}>
                             {saving ? <Loader2 className="spinner" size={16} /> : <Trash2 size={16} />}
                             {language === 'he' ? 'מחק' : 'Delete'}
+                        </button>
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Bulk Delete Modal */}
+            <Modal isOpen={showBulkDeleteModal} onClose={() => setShowBulkDeleteModal(false)} title={language === 'he' ? 'מחיקה מרובה' : 'Bulk Delete'} size="small">
+                <div className="delete-confirm">
+                    <div className="delete-icon"><AlertTriangle size={48} /></div>
+                    <p>
+                        {language === 'he'
+                            ? `האם אתה בטוח שברצונך למחוק ${selectedProducts.length} מוצרים?`
+                            : `Are you sure you want to delete ${selectedProducts.length} products?`}
+                    </p>
+                    <p style={{ fontSize: '0.9em', color: '#888', marginTop: '0.5rem' }}>
+                        {language === 'he' ? 'פעולה זו אינה ניתנת לביטול' : 'This action cannot be undone'}
+                    </p>
+                    <div className="modal-actions">
+                        <button className="btn btn-outline" onClick={() => setShowBulkDeleteModal(false)} disabled={saving}>
+                            {language === 'he' ? 'ביטול' : 'Cancel'}
+                        </button>
+                        <button className="btn btn-danger" onClick={handleBulkDelete} disabled={saving}>
+                            {saving ? <Loader2 className="spinner" size={16} /> : <Trash2 size={16} />}
+                            {language === 'he' ? `מחק ${selectedProducts.length}` : `Delete ${selectedProducts.length}`}
                         </button>
                     </div>
                 </div>

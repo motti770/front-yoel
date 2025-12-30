@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Plus,
     Search,
@@ -40,6 +41,8 @@ import { leadsService, customersService, ordersService, productsService, workflo
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import BulkImporter from '../components/BulkImporter';
+import ConvertToOrderWizard from '../components/ConvertToOrderWizard';
+import OrderLifecycleWizard from '../components/OrderLifecycleWizard';
 import './Leads.css';
 
 // Lead stages - Sales Pipeline with SLA
@@ -76,6 +79,8 @@ const LEAD_SOURCES = {
 };
 
 function Leads({ currentUser, t, language }) {
+    const navigate = useNavigate();
+
     // Data state
     const [leads, setLeads] = useState([]);
     const [products, setProducts] = useState([]);
@@ -97,7 +102,7 @@ function Leads({ currentUser, t, language }) {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showImportModal, setShowImportModal] = useState(false);
     const [showConvertModal, setShowConvertModal] = useState(false);
-    const [conversionChecks, setConversionChecks] = useState({ offerAccepted: false, designApproved: false });
+    const [showProductMatchModal, setShowProductMatchModal] = useState(false);
     const [selectedLead, setSelectedLead] = useState(null);
     const [showActionsMenu, setShowActionsMenu] = useState(false);
     const [toast, setToast] = useState(null);
@@ -416,19 +421,22 @@ function Leads({ currentUser, t, language }) {
     // Safety fallback for legacy calls
     const handleConvertToCustomer = () => handleOpenConvertModal(selectedLead);
 
-    const processConversion = async () => {
+    const processConversion = async (wizardData) => {
         if (!selectedLead) return;
         setSaving(true);
 
         try {
+            // Extract data from wizard
+            const { lead, product, configuration, finalPrice } = wizardData;
+
             // 1. Create Customer
             const customerPayload = {
-                name: selectedLead.name,
-                email: selectedLead.email,
-                phone: selectedLead.phone,
-                companyName: selectedLead.company || selectedLead.name,
-                source: selectedLead.source,
-                notes: `Original Lead ID: ${selectedLead.id}\n${selectedLead.notes || ''}`
+                name: lead.name,
+                email: lead.email,
+                phone: lead.phone,
+                companyName: lead.company || lead.name,
+                source: lead.source,
+                notes: `Original Lead ID: ${lead.id}\n${lead.notes || ''}`
             };
 
             console.log('[Convert] Creating customer...');
@@ -437,27 +445,45 @@ function Leads({ currentUser, t, language }) {
 
             const newCustomer = customerRes.data;
 
-            // 2. Create Order
+            // 2. Create Order with product configuration
             console.log('[Convert] Creating order...');
             const orderPayload = {
                 customerId: newCustomer.id,
-                items: [], // Empty items array - order can be filled in later
-                notes: `Converted from Lead: ${selectedLead.name}\nEstimated Value: ₪${selectedLead.estimatedValue || 0}\nChecklist Verified:\n- Offer Accepted: Yes\n- Design Approved: Yes`,
-                dueDate: null
+                productId: product.id,
+                quantity: 1,
+                totalPrice: finalPrice,
+                status: 'PENDING',
+                productConfiguration: configuration,
+                workflowId: product.workflowId,
+                notes: `Converted from Lead ID: ${lead.id}`
             };
 
-            await ordersService.create(orderPayload);
+            const orderRes = await ordersService.create(orderPayload);
+            if (!orderRes.success) throw new Error(orderRes.error?.message || 'Failed to create order');
 
-            // 3. Delete Lead (or convert status)
-            // Ideally we convert status, but current flow seems to be Delete after convert?
-            // User requested: "Lead passes to become customer". Usually means lead is gone from leads list.
-            console.log('[Convert] Deleting original lead...');
-            await leadsService.delete(selectedLead.id);
+            const newOrder = orderRes.data;
+
+            // 3. Update Lead to WON status (don't delete - keep the record)
+            console.log('[Convert] Updating lead status to WON...');
+            await leadsService.update(lead.id, {
+                stage: 'WON',
+                convertedToCustomerId: newCustomer.id,
+                convertedAt: new Date().toISOString()
+            });
 
             // 4. Update UI
-            setLeads(prev => prev.filter(l => l.id !== selectedLead.id));
+            setLeads(prev => prev.map(l =>
+                l.id === lead.id
+                    ? { ...l, stage: 'WON', convertedToCustomerId: newCustomer.id }
+                    : l
+            ));
             setShowConvertModal(false);
-            showToast(language === 'he' ? 'הליד הומר ללקוח והזמנה נפתחה בהצלחה!' : 'Lead converted and order created successfully!');
+            showToast(language === 'he' ? 'הזמנה נוצרה בהצלחה!' : 'Order created successfully!');
+
+            // 5. Navigate to the new order
+            setTimeout(() => {
+                navigate(`/orders/${newOrder.id}`);
+            }, 500);
 
         } catch (error) {
             console.error('[Convert] Error:', error);
@@ -1412,9 +1438,14 @@ function Leads({ currentUser, t, language }) {
                                 <Edit size={16} /> {language === 'he' ? 'עריכה' : 'Edit'}
                             </button>
                             {selectedLead.stage !== 'WON' && selectedLead.stage !== 'LOST' && (
-                                <button className="btn btn-success" onClick={() => { setShowViewModal(false); setShowConvertModal(true); }}>
-                                    <TrendingUp size={16} /> {language === 'he' ? 'המר ללקוח' : 'Convert to Customer'}
-                                </button>
+                                <>
+                                    <button className="btn btn-primary" onClick={() => { setShowViewModal(false); setShowProductMatchModal(true); }}>
+                                        <Sparkles size={16} /> {language === 'he' ? 'התאמת מוצר' : 'Product Match'}
+                                    </button>
+                                    <button className="btn btn-success" onClick={() => { setShowViewModal(false); setShowConvertModal(true); }}>
+                                        <TrendingUp size={16} /> {language === 'he' ? 'המר ללקוח' : 'Convert to Customer'}
+                                    </button>
+                                </>
                             )}
                             <button className="btn btn-danger" onClick={() => { setShowViewModal(false); setShowDeleteModal(true); }}>
                                 <Trash2 size={16} /> {language === 'he' ? 'מחק' : 'Delete'}
@@ -1599,69 +1630,63 @@ function Leads({ currentUser, t, language }) {
                 />
             </Modal>
 
-            {/* Convert Modal */}
+            {/* Product Match Wizard - Central Interface */}
+            <Modal
+                isOpen={showProductMatchModal}
+                onClose={() => setShowProductMatchModal(false)}
+                title={language === 'he' ? 'התאמת מוצר והקמת הזמנה' : 'Product Match & Order Creation'}
+                size="xlarge"
+                hideHeader
+            >
+                {selectedLead && (
+                    <OrderLifecycleWizard
+                        lead={selectedLead}
+                        language={language}
+                        onComplete={async (data) => {
+                            // Handle order creation using same logic as processConversion
+                            setSaving(true);
+                            try {
+                                // Prepare wizard data for processConversion
+                                const wizardData = {
+                                    lead: data.lead,
+                                    product: data.product,
+                                    configuration: data.parameters,
+                                    finalPrice: data.price?.total || data.product?.basePrice || 0
+                                };
+
+                                // Call processConversion to create customer + order + update lead
+                                await processConversion(wizardData);
+
+                                setShowProductMatchModal(false);
+                                showToast(language === 'he' ? 'הזמנה נוצרה בהצלחה!' : 'Order created successfully!');
+                            } catch (err) {
+                                console.error('[Product Match] Error:', err);
+                                showToast(err.message || (language === 'he' ? 'שגיאה ביצירת הזמנה' : 'Error creating order'), 'error');
+                            } finally {
+                                setSaving(false);
+                            }
+                        }}
+                        onCancel={() => setShowProductMatchModal(false)}
+                    />
+                )}
+            </Modal>
+
+            {/* Convert Modal with Wizard */}
             <Modal
                 isOpen={showConvertModal}
                 onClose={() => setShowConvertModal(false)}
-                title={language === 'he' ? 'המרת ליד ללקוח' : 'Convert Lead to Customer'}
+                title={language === 'he' ? 'המרת ליד להזמנה' : 'Convert Lead to Order'}
+                size="large"
             >
-                <div className="convert-modal-content" style={{ padding: '20px' }}>
-                    {selectedLead && (
-                        <>
-                            <div className="lead-summary glass-card" style={{ padding: '16px', marginBottom: '24px' }}>
-                                <h3 style={{ fontSize: '1.2rem', marginBottom: '8px' }}>{selectedLead.name}</h3>
-                                <div style={{ opacity: 0.7 }}>
-                                    <div>{selectedLead.company}</div>
-                                    <div>₪{Number(selectedLead.estimatedValue || 0).toLocaleString()}</div>
-                                </div>
-                            </div>
-
-                            <div className="checklist-section" style={{ marginBottom: '24px' }}>
-                                <h4 style={{ marginBottom: '16px', fontSize: '1rem' }}>{language === 'he' ? 'בדיקות חובה' : 'Pre-conversion Checks'}</h4>
-
-                                <div className="checklist-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', cursor: 'pointer' }}
-                                    onClick={() => setConversionChecks(prev => ({ ...prev, offerAccepted: !prev.offerAccepted }))}>
-                                    {conversionChecks.offerAccepted ?
-                                        <CheckSquare size={20} className="text-success" style={{ color: '#10b981' }} /> :
-                                        <Square size={20} style={{ opacity: 0.5 }} />
-                                    }
-                                    <span style={{ opacity: conversionChecks.offerAccepted ? 1 : 0.7 }}>
-                                        {language === 'he' ? 'הצעת מחיר אושרה' : 'Price Offer Accepted'}
-                                    </span>
-                                </div>
-
-                                <div className="checklist-item" style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }}
-                                    onClick={() => setConversionChecks(prev => ({ ...prev, designApproved: !prev.designApproved }))}>
-                                    {conversionChecks.designApproved ?
-                                        <CheckSquare size={20} className="text-success" style={{ color: '#10b981' }} /> :
-                                        <Square size={20} style={{ opacity: 0.5 }} />
-                                    }
-                                    <span style={{ opacity: conversionChecks.designApproved ? 1 : 0.7 }}>
-                                        {language === 'he' ? 'עיצוב/מפרט אושר' : 'Design/Specs Approved'}
-                                    </span>
-                                </div>
-                            </div>
-
-
-                            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '32px' }}>
-                                <button className="btn btn-outline" onClick={() => setShowConvertModal(false)}>
-                                    {language === 'he' ? 'ביטול' : 'Cancel'}
-                                </button>
-                                <button
-                                    className="btn btn-primary"
-                                    onClick={processConversion}
-                                    disabled={!conversionChecks.offerAccepted || !conversionChecks.designApproved || saving}
-                                    style={{
-                                        opacity: (!conversionChecks.offerAccepted || !conversionChecks.designApproved) ? 0.5 : 1
-                                    }}
-                                >
-                                    {saving ? <Loader2 className="spinner" size={16} /> : <Briefcase size={16} />}
-                                    {language === 'he' ? 'בצע המרה וצור הזמנה' : 'Convert & Create Order'}
-                                </button>
-                            </div>
-                        </>
-                    )}
-                </div>
+                {selectedLead && (
+                    <ConvertToOrderWizard
+                        lead={selectedLead}
+                        language={language}
+                        onConvert={processConversion}
+                        onCancel={() => setShowConvertModal(false)}
+                        saving={saving}
+                    />
+                )}
             </Modal>
         </div >
     );

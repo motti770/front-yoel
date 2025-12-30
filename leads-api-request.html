@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בקשה לפיתוח Leads API - The Shul CRM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.8;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.4em;
+            margin: 25px 0 15px 0;
+        }
+
+        .alert {
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-right: 5px solid;
+        }
+
+        .alert-danger {
+            background: #fee;
+            border-color: #f44336;
+            color: #c62828;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #2e7d32;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #1565c0;
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            line-height: 1.6;
+            direction: ltr;
+            text-align: left;
+        }
+
+        .code-block .comment {
+            color: #6a9955;
+        }
+
+        .code-block .keyword {
+            color: #569cd6;
+        }
+
+        .code-block .string {
+            color: #ce9178;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .badge-critical {
+            background: #f44336;
+            color: white;
+        }
+
+        .badge-important {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-nice {
+            background: #4caf50;
+            color: white;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 12px 15px;
+            margin: 8px 0;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-right: 4px solid #4caf50;
+        }
+
+        .checklist li:before {
+            content: "✓ ";
+            color: #4caf50;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 30px 40px;
+            text-align: center;
+            border-top: 1px solid #eee;
+        }
+
+        .footer p {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 בקשה לפיתוח Leads API</h1>
+            <p>The Shul CRM Backend</p>
+        </div>
+
+        <div class="content">
+            <!-- Intro -->
+            <div class="section">
+                <h2>👋 היי [שם המפתח],</h2>
+                <p>אני עובר על המערכת ורואה שכל מה שבנית עובד מעולה! 🎉</p>
+                <p>יש רק נושא אחד שחוסם אותי להתקדם - <strong>Leads API</strong>.</p>
+            </div>
+
+            <!-- Problem -->
+            <div class="section">
+                <h2>🔴 הבעיה הנוכחית</h2>
+
+                <div class="alert alert-danger">
+                    <strong>שגיאות שאני מקבל:</strong>
+                    <div class="code-block">
+GET  https://crm-api.app.mottidokib.com/leads → <span style="color: #f44336;">500 Error ❌</span>
+POST https://crm-api.app.mottidokib.com/leads → <span style="color: #f44336;">500 Error ❌</span>
+                    </div>
+                </div>
+
+                <div class="alert alert-success">
+                    <strong>כל שאר ה-API עובד מצוין:</strong>
+                    <ul class="checklist">
+                        <li><code>/customers</code> - עובד</li>
+                        <li><code>/products</code> - עובד</li>
+                        <li><code>/orders</code> - עובד</li>
+                        <li><code>/workflows</code> - עובד</li>
+                        <li><code>/analytics</code> - עובד</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Documentation -->
+            <div class="section">
+                <h2>📋 מה שראיתי בדוקומנטציה שלך</h2>
+                <p>קראתי את הקבצים:</p>
+                <ul>
+                    <li><code>DEVELOPER-GUIDE.md</code></li>
+                    <li><code>FULL-PROJECT-STATUS.md</code></li>
+                </ul>
+
+                <div class="alert alert-info">
+                    <strong>וראיתי שכתבת בפירוש:</strong>
+                    <blockquote style="border-right: 4px solid #2196f3; padding-right: 15px; margin: 15px 0; font-style: italic;">
+                        "Leads API - ❌ חסר! צריך לבנות"
+                    </blockquote>
+                    <p>גם כתבת מפרט מלא של מה צריך - מעולה! 👏</p>
+                </div>
+            </div>
+
+            <!-- Requirements -->
+            <div class="section">
+                <h2>✅ מה אני צריך שיעבוד</h2>
+
+                <h3>1️⃣ Leads CRUD Endpoints</h3>
+
+                <h4>📖 קריאת לידים (GET)</h4>
+                <div class="code-block">
+<span class="keyword">GET</span> /leads?page=1&limit=100&stage=NEW&source=WEBSITE&search=keyword
+
+<span class="comment">// Response:</span>
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"data"</span>: {
+    <span class="string">"leads"</span>: [...],
+    <span class="string">"pagination"</span>: { page, limit, total, totalPages }
+  }
+}
+                </div>
+
+                <h4>➕ יצירת ליד (POST)</h4>
+                <div class="code-block">
+<span class="keyword">POST</span> /leads
+
+<span class="comment">// Body:</span>
+{
+  <span class="string">"name"</span>: <span class="string">"ישראל כהן"</span>,           <span class="comment">// חובה</span>
+  <span class="string">"email"</span>: <span class="string">"israel@example.com"</span>,  <span class="comment">// חובה</span>
+  <span class="string">"phone"</span>: <span class="string">"0501234567"</span>,
+  <span class="string">"company"</span>: <span class="string">"ישיבת ירושלים"</span>,
+  <span class="string">"source"</span>: <span class="string">"WEBSITE"</span>,            <span class="comment">// WEBSITE | REFERRAL | COLD_CALL | SOCIAL | EVENT | OTHER</span>
+  <span class="string">"stage"</span>: <span class="string">"NEW"</span>,                 <span class="comment">// NEW | CONTACTED | QUALIFIED | PROPOSAL | NEGOTIATION | WON | LOST</span>
+  <span class="string">"estimatedValue"</span>: 5000,
+  <span class="string">"priority"</span>: <span class="string">"MEDIUM"</span>,           <span class="comment">// LOW | MEDIUM | HIGH | URGENT</span>
+  <span class="string">"notes"</span>: <span class="string">"מעוניין בספרי קודש"</span>,
+  <span class="string">"nextFollowUp"</span>: <span class="string">"2025-12-30"</span>,
+  <span class="string">"productId"</span>: <span class="string">"uuid"</span>             <span class="comment">// אופציונלי</span>
+}
+
+<span class="comment">// Response:</span>
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"data"</span>: { id, name, email, ... }
+}
+                </div>
+
+                <h4>✏️ עדכון ליד (PUT)</h4>
+                <div class="code-block">
+<span class="keyword">PUT</span> /leads/:id
+
+<span class="comment">// Body:</span>
+{
+  <span class="string">"stage"</span>: <span class="string">"CONTACTED"</span>,
+  <span class="string">"notes"</span>: <span class="string">"דיברתי איתו, מעוניין"</span>,
+  <span class="string">"stageUpdatedAt"</span>: <span class="string">"2025-12-29T12:00:00Z"</span>  <span class="comment">// חשוב ל-SLA!</span>
+}
+                </div>
+
+                <h4>🗑️ מחיקת ליד (DELETE)</h4>
+                <div class="code-block">
+<span class="keyword">DELETE</span> /leads/:id
+                </div>
+
+                <h4>🔄 עדכון שלב (Drag & Drop)</h4>
+                <div class="code-block">
+<span class="keyword">PUT</span> /leads/:id/stage
+<span class="comment">// Body:</span>
+{ <span class="string">"stage"</span>: <span class="string">"QUALIFIED"</span> }
+                </div>
+
+                <h4>🎯 המרה ללקוח (אופציונלי - לא דחוף)</h4>
+                <div class="code-block">
+<span class="keyword">POST</span> /leads/:id/convert
+
+<span class="comment">// Response:</span>
+{
+  <span class="string">"success"</span>: <span class="keyword">true</span>,
+  <span class="string">"data"</span>: {
+    <span class="string">"customerId"</span>: <span class="string">"uuid"</span>,
+    <span class="string">"orderId"</span>: <span class="string">"uuid"</span>  <span class="comment">// אם יצר הזמנה מיד</span>
+  }
+}
+                </div>
+            </div>
+
+            <!-- Database Schema -->
+            <div class="section">
+                <h2>🗄️ Database Schema</h2>
+                <p>לפי מה שכתבת ב-DEVELOPER-GUIDE:</p>
+
+                <div class="code-block">
+<span class="keyword">CREATE TABLE</span> leads (
+  id <span class="keyword">UUID PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  name <span class="keyword">VARCHAR</span>(255) <span class="keyword">NOT NULL</span>,
+  email <span class="keyword">VARCHAR</span>(255) <span class="keyword">NOT NULL</span>,
+  phone <span class="keyword">VARCHAR</span>(50),
+  company <span class="keyword">VARCHAR</span>(255),
+
+  source <span class="keyword">VARCHAR</span>(50) <span class="keyword">DEFAULT</span> <span class="string">'OTHER'</span>,
+  stage <span class="keyword">VARCHAR</span>(50) <span class="keyword">DEFAULT</span> <span class="string">'NEW'</span>,
+  priority <span class="keyword">VARCHAR</span>(20) <span class="keyword">DEFAULT</span> <span class="string">'MEDIUM'</span>,
+
+  estimated_value <span class="keyword">DECIMAL</span>(10,2) <span class="keyword">DEFAULT</span> 0,
+  notes <span class="keyword">TEXT</span>,
+  next_follow_up <span class="keyword">TIMESTAMP</span>,
+
+  product_id <span class="keyword">UUID REFERENCES</span> products(id),
+  assigned_to <span class="keyword">UUID REFERENCES</span> users(id),
+  converted_to_customer_id <span class="keyword">UUID REFERENCES</span> customers(id),
+
+  stage_updated_at <span class="keyword">TIMESTAMP DEFAULT</span> NOW(),  <span class="comment">-- חשוב ל-SLA tracking!</span>
+  created_at <span class="keyword">TIMESTAMP DEFAULT</span> NOW(),
+  updated_at <span class="keyword">TIMESTAMP DEFAULT</span> NOW()
+);
+
+<span class="comment">-- Indexes לביצועים</span>
+<span class="keyword">CREATE INDEX</span> idx_leads_stage <span class="keyword">ON</span> leads(stage);
+<span class="keyword">CREATE INDEX</span> idx_leads_assigned <span class="keyword">ON</span> leads(assigned_to);
+<span class="keyword">CREATE INDEX</span> idx_leads_source <span class="keyword">ON</span> leads(source);
+<span class="keyword">CREATE INDEX</span> idx_leads_created <span class="keyword">ON</span> leads(created_at <span class="keyword">DESC</span>);
+                </div>
+            </div>
+
+            <!-- Validation -->
+            <div class="section">
+                <h2>✔️ Validation (Zod)</h2>
+
+                <div class="code-block">
+<span class="comment">// Create Lead Schema</span>
+<span class="keyword">const</span> createLeadSchema = z.object({
+  name: z.string().min(2).max(255),
+  email: z.string().email(),
+  phone: z.string().max(50).optional(),
+  company: z.string().max(255).optional(),
+  source: z.enum([<span class="string">'WEBSITE'</span>, <span class="string">'REFERRAL'</span>, <span class="string">'COLD_CALL'</span>, <span class="string">'SOCIAL'</span>, <span class="string">'EVENT'</span>, <span class="string">'OTHER'</span>]).default(<span class="string">'OTHER'</span>),
+  stage: z.enum([<span class="string">'NEW'</span>, <span class="string">'CONTACTED'</span>, <span class="string">'QUALIFIED'</span>, <span class="string">'PROPOSAL'</span>, <span class="string">'NEGOTIATION'</span>, <span class="string">'WON'</span>, <span class="string">'LOST'</span>]).default(<span class="string">'NEW'</span>),
+  priority: z.enum([<span class="string">'LOW'</span>, <span class="string">'MEDIUM'</span>, <span class="string">'HIGH'</span>, <span class="string">'URGENT'</span>]).default(<span class="string">'MEDIUM'</span>),
+  estimatedValue: z.number().min(0).default(0),
+  notes: z.string().optional(),
+  nextFollowUp: z.string().datetime().optional(),
+  productId: z.string().uuid().optional(),
+  assignedTo: z.string().uuid().optional()
+});
+                </div>
+            </div>
+
+            <!-- Priority -->
+            <div class="section">
+                <h2>🎯 עדיפות ולוח זמנים</h2>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>מה</th>
+                            <th>דחיפות</th>
+                            <th>למה</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>GET /leads</code></td>
+                            <td><span class="badge badge-critical">קריטי</span></td>
+                            <td>בלי זה לא רואים כלום</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST /leads</code></td>
+                            <td><span class="badge badge-critical">קריטי</span></td>
+                            <td>בלי זה לא יוצרים לידים</td>
+                        </tr>
+                        <tr>
+                            <td><code>PUT /leads/:id</code></td>
+                            <td><span class="badge badge-critical">קריטי</span></td>
+                            <td>בלי זה לא עורכים</td>
+                        </tr>
+                        <tr>
+                            <td><code>DELETE /leads/:id</code></td>
+                            <td><span class="badge badge-important">חשוב</span></td>
+                            <td>נחמד לבדיקות</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST /leads/:id/convert</code></td>
+                            <td><span class="badge badge-nice">נחמד</span></td>
+                            <td>אפשר בשלב 2</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-info">
+                    <strong>⏱️ זמן משוער:</strong> לפי הניסיון שלך עם Customers - כנראה <span class="highlight">2-3 שעות עבודה</span>.
+                </div>
+            </div>
+
+            <!-- Testing -->
+            <div class="section">
+                <h2>✅ איך אני אבדוק שזה עובד?</h2>
+                <p>אשלח לך קריאות לדוגמה:</p>
+
+                <h4>1️⃣ Create lead</h4>
+                <div class="code-block">
+curl -X POST https://crm-api.app.mottidokib.com/leads \
+  -H <span class="string">"Authorization: Bearer YOUR_TOKEN"</span> \
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d <span class="string">'{
+    "name": "ישראל כהן",
+    "email": "test@example.com",
+    "phone": "0501234567",
+    "company": "ישיבת ירושלים",
+    "source": "WEBSITE",
+    "stage": "NEW",
+    "estimatedValue": 5000,
+    "notes": "ליד לבדיקה"
+  }'</span>
+                </div>
+
+                <h4>2️⃣ Get all leads</h4>
+                <div class="code-block">
+curl -X GET <span class="string">"https://crm-api.app.mottidokib.com/leads?page=1&limit=10"</span> \
+  -H <span class="string">"Authorization: Bearer YOUR_TOKEN"</span>
+                </div>
+
+                <p style="margin-top: 20px;">אחרי שזה יעבוד - אני אבדוק בממשק ואעדכן אותך! ✅</p>
+            </div>
+
+            <!-- Questions -->
+            <div class="section">
+                <h2>💬 שאלות?</h2>
+                <p>אם משהו לא ברור או אם אתה צריך עזרה - אני פה! 🙏</p>
+                <p><strong>תודה רבה על העבודה המעולה עד כה!</strong> 🚀</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>תאריך: 29 בדצמבר 2025</p>
+            <p>The Shul CRM - Backend Development Request</p>
+        </div>
+    </div>
+</body>
+</html>

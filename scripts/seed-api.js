@@ -170,15 +170,99 @@ async function seedCustomers() {
 
 // ============ PRODUCTS ============
 const products = [
+    // פרוכות - 9 עיצובים מהקטלוג
     {
-        name: 'פרוכת לארון קודש',
-        sku: 'PAR-001',
-        description: 'פרוכת מהודרת לארון הקודש עם רקמה בעבודת יד',
+        name: 'פרוכת כתר זהב - עיצוב קלאסי',
+        sku: 'PAR-B1Z0',
+        description: 'פרוכת מהודרת עם כתר זהב ועיטורים קלאסיים - עיצוב B1Z0/A1Z0/BW1Z0',
         price: 15000,
+        stockQuantity: 5,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת ירושלים עזול - עיצוב מודרני',
+        sku: 'PAR-B1Z1',
+        description: 'פרוכת בעיצוב מודרני עם מעגל מעוצב ורקמות צבעוניות - עיצוב B1Z1/A1Z1/BW1Z1',
+        price: 16000,
+        stockQuantity: 4,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת מסגרת מלכות - עיצוב שחור זהב',
+        sku: 'PAR-B1Z2',
+        description: 'פרוכת מפוארת בעיצוב שחור-זהב עם כתר מלכותי - עיצוב B1Z2/A1Z2/BW1Z2',
+        price: 17500,
         stockQuantity: 3,
         category: 'RITUAL',
         status: 'ACTIVE'
     },
+    {
+        name: 'פרוכת שער וילנא וקמה מלאה - בית מקדש',
+        sku: 'PAR-B1Z3',
+        description: 'פרוכת ייחודית עם עיטורי בית המקדש ושערים מעוצבים - עיצוב B1Z3/A1Z3/BW1Z3',
+        price: 18000,
+        stockQuantity: 2,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת עץ חיים - עיצוב טבעי',
+        sku: 'PAR-B1Z4',
+        description: 'פרוכת עם עיצוב עץ החיים ועלים מרהיבים - עיצוב B1Z4/A1Z4/BW1Z4',
+        price: 16500,
+        stockQuantity: 4,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת כתר ואבני חברובסקי - עיצוב מפואר',
+        sku: 'PAR-B1Z5',
+        description: 'פרוכת יוקרתית עם כתר ועיטורי דמשק מעודנים - עיצוב B1Z5/A1Z5/BW1Z5',
+        price: 19000,
+        stockQuantity: 2,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת שער וילנא תחום - עיצוב מסורתי',
+        sku: 'PAR-B1Z6',
+        description: 'פרוכת בעיצוב מסורתי עם מסגרת מעוצבת ושער מרכזי - עיצוב B1Z6/A1Z6/BW1Z6',
+        price: 17000,
+        stockQuantity: 3,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת בית מקדש וקמה מלאה - עיצוב מיוחד',
+        sku: 'PAR-B1Z7',
+        description: 'פרוכת מרשימה עם תיאור בית המקדש המפואר - עיצוב B1Z7/A1Z7/BW1Z7',
+        price: 22000,
+        stockQuantity: 1,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת כינת שער צבי - עיצוב אלגנטי',
+        sku: 'PAR-B1Z8',
+        description: 'פרוכת אלגנטית עם כתר ועיטורים מעודנים בפינות - עיצוב B1Z8/A1Z8/BW1Z8',
+        price: 17500,
+        stockQuantity: 3,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+    {
+        name: 'פרוכת שער והרחמים - עיצוב גיאומטרי',
+        sku: 'PAR-B1Z9',
+        description: 'פרוכת בעיצוב גיאומטרי ייחודי עם כתר מרכזי - עיצוב B1Z9/A1Z9/BW1Z9',
+        price: 18500,
+        stockQuantity: 2,
+        category: 'RITUAL',
+        status: 'ACTIVE'
+    },
+
+    // מוצרים אחרים
     {
         name: 'מעיל לספר תורה',
         sku: 'MEI-001',
@@ -247,6 +331,40 @@ async function seedProducts() {
 
 // ============ PARAMETERS ============
 const parameters = [
+    // עיצוב פרוכת
+    {
+        name: 'עיצוב פרוכת',
+        code: 'parochet_design',
+        type: 'SELECT',
+        description: 'בחר עיצוב פרוכת',
+        isRequired: true,
+        options: [
+            { value: 'design_b1z0', label: 'כתר זהב - קלאסי', priceImpact: 0, sortOrder: 1 },
+            { value: 'design_b1z1', label: 'ירושלים עזול - מודרני', priceImpact: 1000, sortOrder: 2 },
+            { value: 'design_b1z2', label: 'מסגרת מלכות - שחור זהב', priceImpact: 2500, sortOrder: 3 },
+            { value: 'design_b1z3', label: 'שער וילנא - בית מקדש', priceImpact: 3000, sortOrder: 4 },
+            { value: 'design_b1z4', label: 'עץ חיים - טבעי', priceImpact: 1500, sortOrder: 5 },
+            { value: 'design_b1z5', label: 'כתר ואבני חברובסקי - מפואר', priceImpact: 4000, sortOrder: 6 },
+            { value: 'design_b1z6', label: 'שער וילנא תחום - מסורתי', priceImpact: 2000, sortOrder: 7 },
+            { value: 'design_b1z7', label: 'בית מקדש וקמה מלאה', priceImpact: 7000, sortOrder: 8 },
+            { value: 'design_b1z8', label: 'כינת שער צבי - אלגנטי', priceImpact: 2500, sortOrder: 9 },
+            { value: 'design_b1z9', label: 'שער והרחמים - גיאומטרי', priceImpact: 3500, sortOrder: 10 }
+        ]
+    },
+    // גודל פרוכת
+    {
+        name: 'גודל פרוכת',
+        code: 'parochet_size',
+        type: 'SELECT',
+        description: 'בחר גודל פרוכת (ביזה/איזה/בוויזה)',
+        isRequired: true,
+        options: [
+            { value: 'size_biza', label: 'ביזה (B1Z*)', priceImpact: 0, sortOrder: 1 },
+            { value: 'size_aiza', label: 'איזה (A1Z*)', priceImpact: -2000, sortOrder: 2 },
+            { value: 'size_bwiza', label: 'בוויזה (BW1Z*)', priceImpact: 3000, sortOrder: 3 }
+        ]
+    },
+    // צבע רקמה
     {
         name: 'צבע רקמה',
         code: 'embroidery_color',
@@ -256,9 +374,11 @@ const parameters = [
         options: [
             { value: 'gold', label: 'זהב', priceImpact: 500, colorHex: '#FFD700', sortOrder: 1 },
             { value: 'silver', label: 'כסף', priceImpact: 300, colorHex: '#C0C0C0', sortOrder: 2 },
-            { value: 'white', label: 'לבן', priceImpact: 0, colorHex: '#FFFFFF', sortOrder: 3 }
+            { value: 'white', label: 'לבן', priceImpact: 0, colorHex: '#FFFFFF', sortOrder: 3 },
+            { value: 'multicolor', label: 'צבעוני', priceImpact: 800, colorHex: '#FF6B6B', sortOrder: 4 }
         ]
     },
+    // סוג בד
     {
         name: 'סוג בד',
         code: 'fabric_type',
@@ -266,20 +386,37 @@ const parameters = [
         description: 'בחר סוג בד',
         isRequired: true,
         options: [
-            { value: 'velvet_red', label: 'קטיפה אדומה', priceImpact: 0, colorHex: '#8B0000', sortOrder: 1 },
-            { value: 'velvet_blue', label: 'קטיפה כחולה', priceImpact: 0, colorHex: '#00008B', sortOrder: 2 },
+            { value: 'velvet_blue_dark', label: 'קטיפה כחולה כהה', priceImpact: 0, colorHex: '#00008B', sortOrder: 1 },
+            { value: 'velvet_black', label: 'קטיפה שחורה', priceImpact: 200, colorHex: '#000000', sortOrder: 2 },
             { value: 'velvet_white', label: 'קטיפה לבנה', priceImpact: 200, colorHex: '#FFFFF0', sortOrder: 3 },
-            { value: 'silk', label: 'משי', priceImpact: 1000, colorHex: '#F5F5DC', sortOrder: 4 }
+            { value: 'velvet_gold', label: 'קטיפה זהובה', priceImpact: 400, colorHex: '#DAA520', sortOrder: 4 },
+            { value: 'silk', label: 'משי', priceImpact: 1000, colorHex: '#F5F5DC', sortOrder: 5 }
         ]
     },
+    // טקסט לרקמה
     {
         name: 'טקסט לרקמה',
         code: 'embroidery_text',
         type: 'TEXT',
-        description: 'הזן טקסט לרקמה',
+        description: 'הזן טקסט מותאם אישית לרקמה',
         isRequired: false,
         options: []
     },
+    // פרנזים (גדילים)
+    {
+        name: 'סוג פרנזים',
+        code: 'fringe_type',
+        type: 'SELECT',
+        description: 'בחר סוג גדילים/פרנזים',
+        isRequired: true,
+        options: [
+            { value: 'fringe_gold', label: 'פרנזים זהב', priceImpact: 500, sortOrder: 1 },
+            { value: 'fringe_silver', label: 'פרנזים כסף', priceImpact: 400, sortOrder: 2 },
+            { value: 'fringe_white', label: 'פרנזים לבן', priceImpact: 300, sortOrder: 3 },
+            { value: 'no_fringe', label: 'ללא פרנזים', priceImpact: -500, sortOrder: 4 }
+        ]
+    },
+    // גודל כללי (למוצרים אחרים)
     {
         name: 'גודל',
         code: 'size',

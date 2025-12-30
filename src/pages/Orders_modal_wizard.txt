@@ -1,0 +1,282 @@
+            {/* Add Order Modal - 3 Step Wizard */}
+            <Modal
+                isOpen={showAddModal}
+                onClose={() => {
+                    setShowAddModal(false);
+                    setWizardStep(1);
+                }}
+                title={`${t?.('newOrder') || 'New Order'} - ${language === 'he' ? 'שלב' : 'Step'} ${wizardStep}/3`}
+                size="large"
+            >
+                <div className="order-wizard">
+                    {/* Wizard Progress */}
+                    <div className="wizard-progress">
+                        <div className={`wizard-step ${wizardStep >= 1 ? 'active' : ''} ${wizardStep > 1 ? 'completed' : ''}`}>
+                            <div className="step-number">1</div>
+                            <span className="step-label">{language === 'he' ? 'לקוח' : 'Customer'}</span>
+                        </div>
+                        <div className="wizard-line" />
+                        <div className={`wizard-step ${wizardStep >= 2 ? 'active' : ''} ${wizardStep > 2 ? 'completed' : ''}`}>
+                            <div className="step-number">2</div>
+                            <span className="step-label">{language === 'he' ? 'מוצרים' : 'Products'}</span>
+                        </div>
+                        <div className="wizard-line" />
+                        <div className={`wizard-step ${wizardStep >= 3 ? 'active' : ''}`}>
+                            <div className="step-number">3</div>
+                            <span className="step-label">{language === 'he' ? 'פרטים' : 'Details'}</span>
+                        </div>
+                    </div>
+
+                    {/* Step 1: Customer Selection */}
+                    {wizardStep === 1 && (
+                        <div className="wizard-section">
+                            <h4><User size={18} /> {language === 'he' ? 'בחירת לקוח' : 'Select Customer'}</h4>
+                            <select
+                                className="form-select"
+                                value={newOrderForm.customerId}
+                                onChange={(e) => setNewOrderForm({ ...newOrderForm, customerId: e.target.value })}
+                            >
+                                <option value="">{language === 'he' ? 'בחר לקוח...' : 'Select customer...'}</option>
+                                {customers.map(c => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.name} {c.companyName ? `- ${c.companyName}` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            {newOrderForm.customerId && (
+                                <div className="customer-preview" style={{ marginTop: '16px', padding: '12px', background: 'var(--bg-hover)', borderRadius: '8px' }}>
+                                    <strong>{customers.find(c => c.id === newOrderForm.customerId)?.name}</strong>
+                                    <p style={{ margin: '4px 0', opacity: 0.7 }}>
+                                        {customers.find(c => c.id === newOrderForm.customerId)?.email}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Step 2: Add Products */}
+                    {wizardStep === 2 && (
+                        <div className="wizard-section">
+                            <h4><Package size={18} /> {language === 'he' ? 'הוספת מוצרים' : 'Add Products'}</h4>
+                            {newOrderForm.items.map((item, idx) => {
+                                const selectedProduct = products.find(p => p.id === item.productId);
+                                const selectedWorkflow = workflows.find(w => w.id === item.workflowId);
+
+                                return (
+                                    <div key={idx} className="order-item-block" style={{ marginBottom: '16px' }}>
+                                        <div className="order-item-row">
+                                            <select
+                                                className="form-select"
+                                                value={item.productId}
+                                                onChange={(e) => {
+                                                    const product = products.find(p => p.id === e.target.value);
+                                                    const newItems = [...newOrderForm.items];
+                                                    newItems[idx] = {
+                                                        ...newItems[idx],
+                                                        productId: e.target.value,
+                                                        unitPrice: product?.basePrice || product?.price || 0,
+                                                        workflowId: product?.workflowId || '',
+                                                        selectedParameters: []
+                                                    };
+                                                    setNewOrderForm({ ...newOrderForm, items: newItems });
+                                                }}
+                                            >
+                                                <option value="">{language === 'he' ? 'בחר מוצר...' : 'Select product...'}</option>
+                                                {products.map(p => (
+                                                    <option key={p.id} value={p.id}>
+                                                        {p.name} - ${(p.basePrice || p.price || 0).toLocaleString()}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <input
+                                                type="number"
+                                                className="form-input quantity-input"
+                                                min="1"
+                                                value={item.quantity}
+                                                onChange={(e) => {
+                                                    const newItems = [...newOrderForm.items];
+                                                    newItems[idx].quantity = parseInt(e.target.value) || 1;
+                                                    setNewOrderForm({ ...newOrderForm, items: newItems });
+                                                }}
+                                                placeholder={language === 'he' ? 'כמות' : 'Qty'}
+                                            />
+                                            <span className="item-price">${(item.unitPrice * item.quantity).toLocaleString()}</span>
+                                        </div>
+
+                                        {/* Product Configurator */}
+                                        {selectedProduct && (
+                                            <ProductConfigurator
+                                                product={selectedProduct}
+                                                language={language}
+                                                onConfigurationChange={(config) => {
+                                                    const newItems = [...newOrderForm.items];
+                                                    newItems[idx] = {
+                                                        ...newItems[idx],
+                                                        selectedParameters: config.selectedParameters,
+                                                        unitPrice: parseFloat(config.finalPrice) || item.unitPrice
+                                                    };
+                                                    setNewOrderForm({ ...newOrderForm, items: newItems });
+                                                }}
+                                            />
+                                        )}
+
+                                        {/* Workflow Selection */}
+                                        {selectedProduct && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <label className="form-label">
+                                                    <PlayCircle size={14} style={{ marginInlineEnd: '6px' }} />
+                                                    {language === 'he' ? 'תהליך ייצור' : 'Production Workflow'}
+                                                </label>
+                                                <select
+                                                    className="form-select"
+                                                    value={item.workflowId}
+                                                    onChange={(e) => {
+                                                        const newItems = [...newOrderForm.items];
+                                                        newItems[idx].workflowId = e.target.value;
+                                                        setNewOrderForm({ ...newOrderForm, items: newItems });
+                                                    }}
+                                                >
+                                                    <option value="">{language === 'he' ? 'ללא תהליך' : 'No workflow'}</option>
+                                                    {workflows.map(w => (
+                                                        <option key={w.id} value={w.id}>
+                                                            {w.name} ({w.steps?.length || 0} {language === 'he' ? 'שלבים' : 'steps'})
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {selectedWorkflow && (
+                                                    <div style={{ marginTop: '8px', fontSize: '0.85rem', opacity: 0.7 }}>
+                                                        {language === 'he' ? 'שלבים:' : 'Steps:'} {selectedWorkflow.steps?.map(s => s.name).join(' → ')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* File Upload */}
+                                        {selectedProduct && (
+                                            <div style={{ marginTop: '12px' }}>
+                                                <label className="form-label">
+                                                    <Upload size={14} style={{ marginInlineEnd: '6px' }} />
+                                                    {language === 'he' ? 'קבצים (סקיצות/דוגמאות)' : 'Files (Sketches/Samples)'}
+                                                </label>
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    className="form-input"
+                                                    onChange={(e) => handleFileUpload(idx, e)}
+                                                    accept="image/*,.pdf,.doc,.docx"
+                                                />
+                                                {item.assets && item.assets.length > 0 && (
+                                                    <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                                        {item.assets.map((file, fileIdx) => (
+                                                            <div
+                                                                key={fileIdx}
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    background: 'var(--bg-card)',
+                                                                    borderRadius: '6px',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '8px',
+                                                                    fontSize: '0.85rem'
+                                                                }}
+                                                            >
+                                                                <FileText size={14} />
+                                                                <span>{file.name}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => removeFile(idx, fileIdx)}
+                                                                    style={{
+                                                                        background: 'none',
+                                                                        border: 'none',
+                                                                        cursor: 'pointer',
+                                                                        color: 'var(--danger)',
+                                                                        padding: '2px'
+                                                                    }}
+                                                                >
+                                                                    <XIcon size={14} />
+                                                                </button>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            <button className="btn btn-outline btn-sm" onClick={addOrderItem}>
+                                <Plus size={14} /> {language === 'he' ? 'הוסף מוצר נוסף' : 'Add Another Product'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* Step 3: Order Details & Summary */}
+                    {wizardStep === 3 && (
+                        <div className="wizard-section">
+                            <h4><Clock size={18} /> {language === 'he' ? 'פרטי הזמנה' : 'Order Details'}</h4>
+                            <div className="form-group">
+                                <label>{language === 'he' ? 'תאריך יעד' : 'Due Date'}</label>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    value={newOrderForm.dueDate}
+                                    onChange={(e) => setNewOrderForm({ ...newOrderForm, dueDate: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>{t?.('notes') || 'Notes'}</label>
+                                <textarea
+                                    className="form-textarea"
+                                    value={newOrderForm.notes}
+                                    onChange={(e) => setNewOrderForm({ ...newOrderForm, notes: e.target.value })}
+                                    placeholder={language === 'he' ? 'הערות להזמנה...' : 'Order notes...'}
+                                    rows="4"
+                                />
+                            </div>
+
+                            {/* Order Summary */}
+                            <div className="order-summary" style={{ marginTop: '24px' }}>
+                                <h4>{language === 'he' ? 'סיכום הזמנה' : 'Order Summary'}</h4>
+                                <div className="summary-items">
+                                    {newOrderForm.items.filter(i => i.productId).map((item, idx) => {
+                                        const product = products.find(p => p.id === item.productId);
+                                        return (
+                                            <div key={idx} className="summary-item" style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                                                <span>{product?.name} x {item.quantity}</span>
+                                                <span>${(item.unitPrice * item.quantity).toLocaleString()}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="summary-row" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '2px solid var(--border-color)' }}>
+                                    <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>{t?.('total') || 'Total'}:</span>
+                                    <span className="summary-total" style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--success)' }}>
+                                        ${newOrderForm.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toLocaleString()}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Wizard Navigation */}
+                    <div className="modal-actions" style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                        <button
+                            className="btn btn-outline"
+                            onClick={() => wizardStep === 1 ? setShowAddModal(false) : prevStep()}
+                            disabled={saving}
+                        >
+                            {wizardStep === 1 ? (t?.('cancel') || 'Cancel') : (language === 'he' ? 'חזרה' : 'Back')}
+                        </button>
+                        {wizardStep < 3 ? (
+                            <button className="btn btn-primary" onClick={nextStep}>
+                                {language === 'he' ? 'המשך' : 'Next'} <ArrowRight size={16} />
+                            </button>
+                        ) : (
+                            <button className="btn btn-primary" onClick={handleCreateOrder} disabled={saving}>
+                                {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}
+                                {language === 'he' ? 'צור הזמנה' : 'Create Order'}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </Modal>

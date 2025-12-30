@@ -976,3 +976,41 @@
         display: none;
     }
 }
+/* Bulk selection styles */
+.select-all-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.select-all-checkbox input[type="checkbox"] {
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+}
+
+.select-all-checkbox label {
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.product-card-checkbox {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+    padding: 0.25rem;
+}
+
+.product-card-checkbox input[type="checkbox"] {
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    accent-color: var(--primary-color);
+}
+
+.product-card {
+    position: relative;
+}

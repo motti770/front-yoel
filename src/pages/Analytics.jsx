@@ -3,13 +3,48 @@ import {
     Package,
     Building2
 } from 'lucide-react';
-import { mockAnalytics, mockDepartments } from '../data/mockData';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import './Analytics.css';
 
+// Mock data for analytics
+const mockAnalytics = {
+    sales: {
+        totalSales: 331000,
+        orderCount: 45,
+        averageOrderValue: 7355
+    },
+    revenueTrends: [
+        { month: 'ינואר', revenue: 45000, period: 'ינואר' },
+        { month: 'פברואר', revenue: 52000, period: 'פברואר' },
+        { month: 'מרץ', revenue: 48000, period: 'מרץ' },
+        { month: 'אפריל', revenue: 61000, period: 'אפריל' },
+        { month: 'מאי', revenue: 58000, period: 'מאי' },
+        { month: 'יוני', revenue: 67000, period: 'יוני' }
+    ],
+    productPerformance: [
+        { name: 'פרוכת לארון קודש', sales: 15 },
+        { name: 'מעיל לספר תורה', sales: 23 },
+        { name: 'כיסוי לבימה', sales: 12 },
+        { name: 'טלית מהודרת', sales: 45 }
+    ],
+    departmentWorkload: [
+        { department: 'עיצוב רקמה', tasks: 18 },
+        { department: 'חיתוך', tasks: 12 },
+        { department: 'תפירה', tasks: 22 },
+        { department: 'איכות', tasks: 8 }
+    ]
+};
+
+const mockDepartments = [
+    { id: '1', name: 'עיצוב רקמה', color: '#667eea' },
+    { id: '2', name: 'חיתוך', color: '#f5576c' },
+    { id: '3', name: 'תפירה', color: '#4facfe' },
+    { id: '4', name: 'איכות', color: '#00f2fe' }
+];
+
 function Analytics({ currentUser }) {
     // Only ADMIN/MANAGER can see analytics
-    if (currentUser.role === 'EMPLOYEE') {
+    if (currentUser && currentUser.role === 'EMPLOYEE') {
         return (
             <div className="access-denied glass-card">
                 <TrendingUp size={48} />

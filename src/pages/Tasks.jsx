@@ -128,16 +128,40 @@ function Tasks({ currentUser, t, language }) {
                 }
             }
 
-            // 2. Update task status
-            await tasksService.updateStatus(selectedTaskToComplete.id, 'COMPLETED');
+            // 2. Complete task (this triggers automation!)
+            const result = await tasksService.onTaskComplete(selectedTaskToComplete.id, {
+                notes: completionNote
+            });
 
-            // 3. Update local state
-            setTasks(tasks.map(t =>
-                t.id === selectedTaskToComplete.id ? { ...t, status: 'COMPLETED' } : t
-            ));
+            if (result.success) {
+                // 3. Refresh tasks to get updated state
+                await fetchData();
 
-            showToast(t?.('taskCompleted') || 'Task completed successfully', 'success');
-            setShowCompleteModal(false);
+                // Show success messages
+                if (result.data?.nextTasks && result.data.nextTasks.length > 0) {
+                    showToast(
+                        language === 'he'
+                            ? `המשימה הושלמה! ${result.data.nextTasks.length} משימות נוספות התחילו אוטומטית.`
+                            : `Task completed! ${result.data.nextTasks.length} tasks started automatically.`,
+                        'success'
+                    );
+                } else if (result.data?.orderCompleted) {
+                    showToast(
+                        language === 'he'
+                            ? 'כל המשימות הושלמו! ההזמנה הסתיימה.'
+                            : 'All tasks completed! Order is done.',
+                        'success'
+                    );
+                } else {
+                    showToast(t?.('taskCompleted') || 'Task completed successfully', 'success');
+                }
+
+                setShowCompleteModal(false);
+                setCompletionNote('');
+                setCompletionFile(null);
+            } else {
+                throw new Error(result.error?.message || 'Failed to complete task');
+            }
         } catch (err) {
             console.error('Completion failed:', err);
             showToast(t?.('completionFailed') || 'Failed to complete task', 'error');
@@ -412,13 +436,20 @@ function Tasks({ currentUser, t, language }) {
 
                         <div className="task-product">
                             <Package size={16} />
-                            <span>{task.orderItem?.product?.name || '-'}</span>
+                            <span>{task.orderItem?.product?.name || task.title || '-'}</span>
                         </div>
 
                         <div className="task-order">
-                            <span className="order-number">{task.orderItem?.order?.orderNumber || '-'}</span>
+                            <span className="order-number">{task.orderItem?.order?.orderNumber || task.orderId || '-'}</span>
                             <span className="customer-name">{task.orderItem?.order?.customer?.name || '-'}</span>
                         </div>
+
+                        {task.dependsOnTaskId && (
+                            <div className="task-dependency">
+                                <Clock size={14} />
+                                <span>{language === 'he' ? 'ממתין למשימה קודמת' : 'Waiting for previous task'}</span>
+                            </div>
+                        )}
 
                         {isSales && task.orderItem?.unitPrice && (
                             <div className="task-price">

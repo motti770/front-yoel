@@ -10,7 +10,6 @@ import {
     Mail
 } from 'lucide-react';
 import { usersService } from '../services/api';
-import { mockUsers } from '../data/mockData';
 import './UsersPage.css';
 
 function UsersPage({ currentUser }) {

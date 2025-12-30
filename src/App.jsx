@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from 'react';
+import { useState, createContext, useContext, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -28,12 +28,14 @@ import {
   User,
   Info,
   AlertTriangle,
+  CheckCircle,
   Warehouse
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
-import { getNavItemsForRole } from './data/mockData';
+import { getNavItemsForRole } from './utils/navigation';
 import { translations, getUserLanguage, ukrainianDepartments } from './data/translations';
+import { seedParochetData } from './utils/seedParochetData';
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Products from './pages/Products';
@@ -337,26 +339,36 @@ function AppContent() {
                 </button>
 
                 {showNotifications && (
-                  <div className="dropdown-menu notifications-dropdown" style={{ position: 'absolute', insetInlineEnd: 0, insetInlineStart: 'auto', left: 'unset', right: 'unset', top: 'calc(100% + 8px)', zIndex: 1000, minWidth: '320px', maxWidth: '400px', transform: 'none' }}>
+                  <div className="dropdown-menu notifications-dropdown">
                     <div className="dropdown-header">
                       <h3>{language === 'he' ? 'התראות' : 'Notifications'}</h3>
                       <button className="text-btn">{language === 'he' ? 'סמן הכל כנקרא' : 'Mark all read'}</button>
                     </div>
                     <div className="dropdown-content">
                       <div className="notification-item unread">
-                        <div className="notif-icon info"><Info size={16} /></div>
+                        <div className="notif-icon success"><CheckCircle size={16} /></div>
                         <div className="notif-text">
-                          <p className="notif-title">{language === 'he' ? 'הזמנה חדשה התקבלה' : 'New order received'}</p>
-                          <p className="notif-time">{language === 'he' ? 'לפני 5 דקות' : '5 mins ago'}</p>
+                          <p className="notif-title">{language === 'he' ? 'משימת עיצוב הושלמה' : 'Design task completed'}</p>
+                          <p className="notif-time">{language === 'he' ? 'לפני 10 דקות' : '10 mins ago'}</p>
                         </div>
                       </div>
                       <div className="notification-item unread">
-                        <div className="notif-icon warning"><AlertTriangle size={16} /></div>
+                        <div className="notif-icon info"><Info size={16} /></div>
                         <div className="notif-text">
-                          <p className="notif-title">{language === 'he' ? 'מלאי בד נמוך' : 'Low fabric stock'}</p>
-                          <p className="notif-time">{language === 'he' ? 'לפני שעה' : '1 hour ago'}</p>
+                          <p className="notif-title">{language === 'he' ? 'הזמנה חדשה #ORD-20250129-003' : 'New order #ORD-20250129-003'}</p>
+                          <p className="notif-time">{language === 'he' ? 'לפני 25 דקות' : '25 mins ago'}</p>
                         </div>
                       </div>
+                      <div className="notification-item">
+                        <div className="notif-icon warning"><AlertTriangle size={16} /></div>
+                        <div className="notif-text">
+                          <p className="notif-title">{language === 'he' ? 'מלאי בד כחול נמוך - 5 יחידות' : 'Low blue fabric stock - 5 units'}</p>
+                          <p className="notif-time">{language === 'he' ? 'לפני שעתיים' : '2 hours ago'}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="dropdown-footer">
+                      <button className="text-btn-center">{language === 'he' ? 'צפה בכל ההתראות' : 'View all notifications'}</button>
                     </div>
                   </div>
                 )}
@@ -384,7 +396,7 @@ function AppContent() {
                 </div>
 
                 {showProfileMenu && (
-                  <div className="dropdown-menu profile-dropdown" style={{ position: 'absolute', insetInlineEnd: 0, insetInlineStart: 'auto', left: 'unset', right: 'unset', top: 'calc(100% + 8px)', zIndex: 1000, minWidth: '240px', maxWidth: '300px', transform: 'none' }}>
+                  <div className="dropdown-menu profile-dropdown">
                     <div className="dropdown-header user-header">
                       <div className="avatar large" style={{ background: roleColors[currentUser.role] }}>
                         {currentUser.firstName?.charAt(0) || ''}{currentUser.lastName?.charAt(0) || ''}
@@ -392,6 +404,7 @@ function AppContent() {
                       <div className="user-details">
                         <h4>{currentUser.firstName} {currentUser.lastName}</h4>
                         <span>{currentUser.email}</span>
+                        <span className="user-role-badge">{roleLabels[currentUser.role]}</span>
                       </div>
                     </div>
                     <div className="dropdown-links">
@@ -402,6 +415,10 @@ function AppContent() {
                       <button className="menu-item">
                         <Settings size={16} />
                         {language === 'he' ? 'הגדרות' : 'Settings'}
+                      </button>
+                      <button className="menu-item">
+                        <Bell size={16} />
+                        {language === 'he' ? 'העדפות התראות' : 'Notification Preferences'}
                       </button>
                       <div className="divider"></div>
                       <button className="menu-item danger" onClick={logout}>
@@ -513,6 +530,14 @@ function AppContent() {
 }
 
 function App() {
+  // Seed parochet data on app initialization
+  useEffect(() => {
+    const result = seedParochetData();
+    if (result.success && !result.skipped) {
+      console.log('[App] Parochet data seeded:', result.data);
+    }
+  }, []);
+
   return (
     <Router>
       <ThemeProvider>
