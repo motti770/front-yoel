@@ -2480,6 +2480,57 @@ export const productsService = {
     }
 };
 
+// ============ HELPER: Find least busy user ============
+const findLeastBusyUser = (departmentId, role = null, specificUserId = null) => {
+    // If specific user is requested, return that user
+    if (specificUserId) {
+        const user = mockUsers.find(u => u.id === specificUserId);
+        return user ? { id: user.id, name: `${user.firstName} ${user.lastName}` } : null;
+    }
+
+    // Get users in department (or all users if no department)
+    let eligibleUsers = [...mockUsers];
+
+    // Filter by department if specified
+    if (departmentId) {
+        eligibleUsers = eligibleUsers.filter(u =>
+            u.departmentId === departmentId || u.department === departmentId
+        );
+    }
+
+    // Filter by role if specified
+    if (role) {
+        eligibleUsers = eligibleUsers.filter(u => u.role === role);
+    }
+
+    // If no eligible users, return null
+    if (eligibleUsers.length === 0) {
+        return null;
+    }
+
+    // Count open tasks per user
+    const openStatuses = ['PENDING', 'IN_PROGRESS', 'BLOCKED'];
+    const taskCounts = eligibleUsers.map(user => {
+        const userTasks = mockTasks.filter(t =>
+            t.assignedToId === user.id && openStatuses.includes(t.status)
+        );
+        return {
+            user,
+            taskCount: userTasks.length
+        };
+    });
+
+    // Sort by task count (ascending) and return the least busy
+    taskCounts.sort((a, b) => a.taskCount - b.taskCount);
+    const leastBusy = taskCounts[0];
+
+    return leastBusy ? {
+        id: leastBusy.user.id,
+        name: `${leastBusy.user.firstName} ${leastBusy.user.lastName}`,
+        taskCount: leastBusy.taskCount
+    } : null;
+};
+
 // ============ ORDERS ============
 export const ordersService = {
     getAll: async (params = {}) => {
@@ -2623,6 +2674,22 @@ export const ordersService = {
                         const stepDays = typeof step === 'object' ? step.estimatedDurationDays : daysPerStep;
                         const stepDeptId = typeof step === 'object' ? step.departmentId : null;
 
+                        // Get assignment configuration from workflow step
+                        const assignmentType = typeof step === 'object' ? step.assignmentType : 'AUTO_DEPARTMENT';
+                        const assignToRole = typeof step === 'object' ? step.assignToRole : null;
+                        const assignToUserId = typeof step === 'object' ? step.assignToUserId : null;
+
+                        // Find the assigned user based on configuration
+                        let assignedUser = null;
+                        if (assignmentType === 'SPECIFIC_USER' && assignToUserId) {
+                            assignedUser = findLeastBusyUser(null, null, assignToUserId);
+                        } else if (assignmentType === 'SPECIFIC_ROLE' && assignToRole) {
+                            assignedUser = findLeastBusyUser(stepDeptId, assignToRole, null);
+                        } else {
+                            // AUTO_DEPARTMENT - find least busy in department
+                            assignedUser = findLeastBusyUser(stepDeptId, null, null);
+                        }
+
                         const taskId = `task-${orderId}-${index}`;
                         const dueDate = new Date(baseDate);
                         // Production starts after payment (add buffer)
@@ -2636,11 +2703,15 @@ export const ordersService = {
                             workflowStepIndex: index,
                             workflowStepName: stepName,
                             departmentId: stepDeptId,
+                            // Auto-assigned user
+                            assignedToId: assignedUser?.id || null,
+                            assignee: assignedUser?.name || null,
                             workflowStep: {
                                 name: stepName,
                                 stepOrder: index + 1,
                                 estimatedDurationDays: stepDays,
-                                departmentId: stepDeptId
+                                departmentId: stepDeptId,
+                                assignmentType: assignmentType
                             },
                             orderItem: {
                                 order: {
@@ -2658,7 +2729,9 @@ export const ordersService = {
                             createdAt: new Date().toISOString().split('T')[0],
                             // First production task depends on payment task
                             dependsOnTaskId: index === 0 ? paymentTaskId : `task-${orderId}-${index - 1}`,
-                            notes: `שלב ${index + 1} מתוך ${workflow.steps.length} - יתחיל לאחר תשלום מקדמה`
+                            notes: assignedUser
+                                ? `שלב ${index + 1} מתוך ${workflow.steps.length} - משויך ל${assignedUser.name}`
+                                : `שלב ${index + 1} מתוך ${workflow.steps.length} - יתחיל לאחר תשלום מקדמה`
                         };
 
                         mockTasks.push(newTask);

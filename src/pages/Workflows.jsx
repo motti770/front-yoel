@@ -18,7 +18,7 @@ import {
     Target,
     Clock
 } from 'lucide-react';
-import { workflowsService, departmentsService } from '../services/api';
+import { workflowsService, departmentsService, usersService } from '../services/api';
 import Modal from '../components/Modal';
 import './Workflows.css';
 
@@ -26,6 +26,7 @@ function Workflows({ currentUser, t, language }) {
     const [activeTab, setActiveTab] = useState('production'); // 'production' or 'sales'
     const [workflows, setWorkflows] = useState([]);
     const [departments, setDepartments] = useState([]);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [expandedWorkflow, setExpandedWorkflow] = useState(null);
@@ -69,7 +70,11 @@ function Workflows({ currentUser, t, language }) {
         departmentId: '',
         stepOrder: 1,
         estimatedDurationDays: 1,
-        isActive: true
+        isActive: true,
+        // Assignment configuration
+        assignmentType: 'AUTO_DEPARTMENT', // AUTO_DEPARTMENT, SPECIFIC_ROLE, SPECIFIC_USER
+        assignToRole: '',  // EMPLOYEE, MANAGER, etc.
+        assignToUserId: '' // specific user ID
     });
 
     const canEdit = currentUser?.role === 'ADMIN' || currentUser?.role === 'MANAGER';
@@ -82,9 +87,10 @@ function Workflows({ currentUser, t, language }) {
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [workflowsRes, deptsRes] = await Promise.all([
+            const [workflowsRes, deptsRes, usersRes] = await Promise.all([
                 workflowsService.getAll({ limit: 100 }),
-                departmentsService.getAll({ limit: 100 })
+                departmentsService.getAll({ limit: 100 }),
+                usersService.getAll()
             ]);
 
             if (workflowsRes.success) {
@@ -95,6 +101,10 @@ function Workflows({ currentUser, t, language }) {
 
             if (deptsRes.success) {
                 setDepartments(deptsRes.data.departments || []);
+            }
+
+            if (usersRes.success) {
+                setUsers(usersRes.data?.users || usersRes.data || []);
             }
         } catch (err) {
             setError(err.error?.message || 'Failed to load workflows');
@@ -244,7 +254,10 @@ function Workflows({ currentUser, t, language }) {
                         departmentId: step.departmentId || step.department?.id,
                         stepOrder: step.stepOrder,
                         estimatedDurationDays: step.estimatedDurationDays,
-                        isActive: true
+                        isActive: true,
+                        assignmentType: step.assignmentType || 'AUTO_DEPARTMENT',
+                        assignToRole: step.assignToRole || '',
+                        assignToUserId: step.assignToUserId || ''
                     });
                 }
                 await fetchData(); // Refresh to get complete data
@@ -305,7 +318,10 @@ function Workflows({ currentUser, t, language }) {
             departmentId: firstDeptId,
             stepOrder: maxOrder,
             estimatedDurationDays: 1,
-            isActive: true
+            isActive: true,
+            assignmentType: 'AUTO_DEPARTMENT',
+            assignToRole: '',
+            assignToUserId: ''
         });
         setShowStepModal(true);
     };
@@ -319,7 +335,10 @@ function Workflows({ currentUser, t, language }) {
             departmentId: step.departmentId || step.department?.id || '',
             stepOrder: step.stepOrder || 1,
             estimatedDurationDays: step.estimatedDurationDays || 1,
-            isActive: step.isActive !== false
+            isActive: step.isActive !== false,
+            assignmentType: step.assignmentType || 'AUTO_DEPARTMENT',
+            assignToRole: step.assignToRole || '',
+            assignToUserId: step.assignToUserId || ''
         });
         setShowStepModal(true);
     };
@@ -838,6 +857,32 @@ function Workflows({ currentUser, t, language }) {
                                                             </div>
                                                         )}
                                                         <span className="duration">{step.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}</span>
+                                                        {/* Show assignment type */}
+                                                        {step.assignmentType && (
+                                                            <span
+                                                                className="assignment-badge"
+                                                                style={{
+                                                                    background: step.assignmentType === 'AUTO_DEPARTMENT' ? 'rgba(16, 185, 129, 0.15)' :
+                                                                               step.assignmentType === 'SPECIFIC_ROLE' ? 'rgba(245, 158, 11, 0.15)' :
+                                                                               'rgba(99, 102, 241, 0.15)',
+                                                                    color: step.assignmentType === 'AUTO_DEPARTMENT' ? '#10b981' :
+                                                                           step.assignmentType === 'SPECIFIC_ROLE' ? '#f59e0b' : '#6366f1',
+                                                                    padding: '3px 8px',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '0.75rem',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '4px'
+                                                                }}
+                                                            >
+                                                                <Target size={12} />
+                                                                {step.assignmentType === 'AUTO_DEPARTMENT' && (language === 'he' ? 'אוטומטי' : 'Auto')}
+                                                                {step.assignmentType === 'SPECIFIC_ROLE' && (language === 'he' ? step.assignToRole : step.assignToRole)}
+                                                                {step.assignmentType === 'SPECIFIC_USER' && (
+                                                                    users.find(u => u.id === step.assignToUserId)?.firstName || (language === 'he' ? 'עובד ספציפי' : 'Specific')
+                                                                )}
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -913,7 +958,103 @@ function Workflows({ currentUser, t, language }) {
                             ))}
                         </select>
                     </div>
-                    <div className="form-row">
+
+                    {/* Task Assignment Configuration */}
+                    <div className="form-section" style={{
+                        background: 'rgba(102, 126, 234, 0.1)',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        marginTop: '16px',
+                        border: '1px solid rgba(102, 126, 234, 0.2)'
+                    }}>
+                        <h4 style={{ margin: '0 0 12px 0', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Target size={16} />
+                            {language === 'he' ? 'שיוך משימה' : 'Task Assignment'}
+                        </h4>
+
+                        <div className="form-group">
+                            <label>{language === 'he' ? 'אופן שיוך' : 'Assignment Type'}</label>
+                            <select
+                                className="form-input"
+                                value={stepFormData.assignmentType}
+                                onChange={(e) => setStepFormData({
+                                    ...stepFormData,
+                                    assignmentType: e.target.value,
+                                    assignToRole: '',
+                                    assignToUserId: ''
+                                })}
+                            >
+                                <option value="AUTO_DEPARTMENT">
+                                    {language === 'he' ? 'אוטומטי - הכי פחות עמוס במחלקה' : 'Auto - Least busy in department'}
+                                </option>
+                                <option value="SPECIFIC_ROLE">
+                                    {language === 'he' ? 'לפי תפקיד' : 'By Role'}
+                                </option>
+                                <option value="SPECIFIC_USER">
+                                    {language === 'he' ? 'לעובד ספציפי' : 'Specific Employee'}
+                                </option>
+                            </select>
+                        </div>
+
+                        {stepFormData.assignmentType === 'SPECIFIC_ROLE' && (
+                            <div className="form-group">
+                                <label>{language === 'he' ? 'תפקיד' : 'Role'}</label>
+                                <select
+                                    className="form-input"
+                                    value={stepFormData.assignToRole}
+                                    onChange={(e) => setStepFormData({ ...stepFormData, assignToRole: e.target.value })}
+                                >
+                                    <option value="">{language === 'he' ? 'בחר תפקיד' : 'Select role'}</option>
+                                    <option value="MANAGER">{language === 'he' ? 'מנהל' : 'Manager'}</option>
+                                    <option value="EMPLOYEE">{language === 'he' ? 'עובד' : 'Employee'}</option>
+                                    <option value="ADMIN">{language === 'he' ? 'מנהל מערכת' : 'Admin'}</option>
+                                </select>
+                            </div>
+                        )}
+
+                        {stepFormData.assignmentType === 'SPECIFIC_USER' && (
+                            <div className="form-group">
+                                <label>{language === 'he' ? 'עובד' : 'Employee'}</label>
+                                <select
+                                    className="form-input"
+                                    value={stepFormData.assignToUserId}
+                                    onChange={(e) => setStepFormData({ ...stepFormData, assignToUserId: e.target.value })}
+                                >
+                                    <option value="">{language === 'he' ? 'בחר עובד' : 'Select employee'}</option>
+                                    {users.map(user => (
+                                        <option key={user.id} value={user.id}>
+                                            {user.firstName} {user.lastName} ({user.role})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <p style={{
+                            fontSize: '0.8rem',
+                            opacity: 0.7,
+                            margin: '8px 0 0 0',
+                            lineHeight: 1.4
+                        }}>
+                            {stepFormData.assignmentType === 'AUTO_DEPARTMENT' && (
+                                language === 'he'
+                                    ? 'המשימה תשויך אוטומטית לעובד עם הכי פחות משימות פתוחות במחלקה'
+                                    : 'Task will be auto-assigned to the employee with fewest open tasks in the department'
+                            )}
+                            {stepFormData.assignmentType === 'SPECIFIC_ROLE' && (
+                                language === 'he'
+                                    ? 'המשימה תשויך לבעל התפקיד הפחות עמוס במחלקה'
+                                    : 'Task will be assigned to the least busy person with this role in the department'
+                            )}
+                            {stepFormData.assignmentType === 'SPECIFIC_USER' && (
+                                language === 'he'
+                                    ? 'המשימה תשויך תמיד לעובד הזה'
+                                    : 'Task will always be assigned to this employee'
+                            )}
+                        </p>
+                    </div>
+
+                    <div className="form-row" style={{ marginTop: '16px' }}>
                         <div className="form-group">
                             <label>{language === 'he' ? 'סדר' : 'Order'}</label>
                             <input type="number" className="form-input" min={1} value={stepFormData.stepOrder} onChange={(e) => setStepFormData({ ...stepFormData, stepOrder: parseInt(e.target.value) || 1 })} />

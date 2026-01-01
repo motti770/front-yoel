@@ -105,8 +105,22 @@ DELETE /notifications/:id          - מחיקה
 ### Products - להוסיף שדה:
 - `salesWorkflowId` → קשור ל-Workflow (תהליך מכירה)
 
-### Workflows - להוסיף שדה:
+### Workflows - להוסיף שדות:
 - `type` (PRODUCTION / SALES)
+
+**שלבי Workflow (WorkflowStep) - שדות חדשים לשיוך משימות:**
+- `assignmentType` (AUTO_DEPARTMENT / SPECIFIC_ROLE / SPECIFIC_USER)
+  - AUTO_DEPARTMENT = שיוך אוטומטי לעובד הכי פחות עמוס במחלקה
+  - SPECIFIC_ROLE = שיוך לפי תפקיד (מנהל, עובד בכיר, עובד זוטר)
+  - SPECIFIC_USER = שיוך לעובד ספציפי
+- `assignToRole` (string, optional) - תפקיד לשיוך (רק כש-assignmentType=SPECIFIC_ROLE)
+- `assignToUserId` (string, optional) - מזהה עובד לשיוך (רק כש-assignmentType=SPECIFIC_USER)
+
+**לוגיקת "הכי פחות עמוס":**
+כשיוצרים Task עם assignmentType=AUTO_DEPARTMENT:
+1. מצא את כל העובדים במחלקה הרלוונטית
+2. ספור לכל אחד כמה Tasks פתוחות יש לו (status != COMPLETED)
+3. שייך לעובד עם הכי פחות משימות פתוחות
 
 ### Orders - לוודא:
 - כשיוצרים הזמנה ויש workflow למוצר → ליצור Tasks אוטומטית לכל שלב
