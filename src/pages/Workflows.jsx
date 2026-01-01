@@ -491,6 +491,7 @@ function Workflows({ currentUser, t, language }) {
 
             {/* Sales Pipeline Tab Content */}
             {activeTab === 'sales' && (
+                <>
                 <div className="sales-pipeline-content glass-card" style={{ padding: '24px', borderRadius: '16px' }}>
                     <div style={{ marginBottom: '20px' }}>
                         <h3 style={{ marginBottom: '8px' }}>{language === 'he' ? 'שלבי מכירות' : 'Sales Stages'}</h3>
@@ -608,12 +609,140 @@ function Workflows({ currentUser, t, language }) {
                         </div>
                     )}
                 </div>
+
+                {/* Sales Workflows Section */}
+                <div className="sales-workflows-content glass-card" style={{ padding: '24px', borderRadius: '16px', marginTop: '20px' }}>
+                    <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <h3 style={{ marginBottom: '8px' }}>{language === 'he' ? 'תהליכי מכירה למוצרים' : 'Product Sales Workflows'}</h3>
+                            <p style={{ opacity: 0.6, fontSize: '0.9rem' }}>{language === 'he' ? 'תהליכים שרצים לפני תשלום - לפי סוג מוצר' : 'Pre-payment processes by product type'}</p>
+                        </div>
+                        {canEdit && (
+                            <button className="btn btn-primary" onClick={handleAddWorkflow}>
+                                <Plus size={18} />
+                                {language === 'he' ? 'תהליך חדש' : 'New Workflow'}
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="workflows-list">
+                        {workflows.filter(w => w.type === 'SALES').map(workflow => (
+                            <div key={workflow.id} className="workflow-card glass-card" style={{ marginBottom: '12px' }}>
+                                <div
+                                    className="workflow-header"
+                                    onClick={() => setExpandedWorkflow(expandedWorkflow === workflow.id ? null : workflow.id)}
+                                >
+                                    <div className="workflow-icon" style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}>
+                                        <Target size={24} />
+                                    </div>
+
+                                    <div className="workflow-info">
+                                        <h3>{workflow.name}</h3>
+                                        <p>{workflow.description || '-'}</p>
+                                        <div className="workflow-meta">
+                                            <span className="meta-tag code">{workflow.code}</span>
+                                            <span className="meta-tag steps">{workflow.steps?.length || 0} {language === 'he' ? 'שלבים' : 'steps'}</span>
+                                            {workflow.steps?.some(s => s.isPaymentStep) && (
+                                                <span className="meta-tag" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981' }}>
+                                                    {language === 'he' ? 'כולל תשלום' : 'Has Payment'}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="workflow-status">
+                                        <span className={`status-badge ${workflow.isActive !== false ? 'active' : 'inactive'}`}>
+                                            {workflow.isActive !== false ? (language === 'he' ? 'פעיל' : 'Active') : (language === 'he' ? 'לא פעיל' : 'Inactive')}
+                                        </span>
+                                    </div>
+
+                                    {canEdit && (
+                                        <div className="workflow-actions" onClick={(e) => e.stopPropagation()}>
+                                            <button className="action-btn" onClick={() => handleEditWorkflow(workflow)} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                                                <Edit size={16} />
+                                            </button>
+                                            <button className="action-btn danger" onClick={() => { setSelectedWorkflow(workflow); setShowDeleteModal(true); }} title={language === 'he' ? 'מחיקה' : 'Delete'}>
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    <button className="expand-btn">
+                                        {expandedWorkflow === workflow.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                                    </button>
+                                </div>
+
+                                {expandedWorkflow === workflow.id && (
+                                    <div className="workflow-steps">
+                                        <h4>{language === 'he' ? 'שלבי התהליך' : 'Process Steps'}</h4>
+                                        <div className="steps-timeline">
+                                            {(workflow.steps || []).map((step, index) => (
+                                                <div key={step.id} className="step-item">
+                                                    <div className="step-connector">
+                                                        <div className="step-number" style={step.isPaymentStep ? { background: '#10b981' } : {}}>{index + 1}</div>
+                                                        {index < (workflow.steps?.length || 0) - 1 && <div className="step-line"></div>}
+                                                    </div>
+
+                                                    <div className="step-content">
+                                                        <div className="step-header">
+                                                            <h5>{step.name}</h5>
+                                                            {step.isPaymentStep && (
+                                                                <span style={{
+                                                                    background: 'rgba(16, 185, 129, 0.2)',
+                                                                    color: '#10b981',
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '0.75rem',
+                                                                    marginInlineStart: '8px'
+                                                                }}>
+                                                                    {language === 'he' ? 'שלב תשלום' : 'Payment Step'}
+                                                                </span>
+                                                            )}
+                                                            {canEdit && (
+                                                                <div className="step-actions">
+                                                                    <button className="step-action-btn" onClick={() => handleEditStep(workflow, step)} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                                                                        <Edit size={16} />
+                                                                    </button>
+                                                                    <button className="step-action-btn danger" onClick={() => handleDeleteStep(workflow, step)} title={language === 'he' ? 'מחיקה' : 'Delete'}>
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="step-details">
+                                                            <span className="duration">{step.estimatedDurationDays || 1} {language === 'he' ? 'ימים' : 'days'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {canEdit && (
+                                            <button className="add-step-btn" onClick={() => handleAddStep(workflow)}>
+                                                <Plus size={16} />
+                                                {language === 'he' ? 'הוסף שלב' : 'Add Step'}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {workflows.filter(w => w.type === 'SALES').length === 0 && (
+                            <div className="empty-state" style={{ padding: '40px', textAlign: 'center' }}>
+                                <Target size={48} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                                <p>{language === 'he' ? 'אין תהליכי מכירה מוגדרים' : 'No sales workflows defined'}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+                </>
             )}
 
             {/* Production Workflows Tab Content */}
             {activeTab === 'production' && (
                 <div className="workflows-list">
-                    {workflows.map(workflow => (
+                    {workflows.filter(w => w.type === 'PRODUCTION' || !w.type).map(workflow => (
                         <div key={workflow.id} className="workflow-card glass-card">
                             <div
                                 className="workflow-header"

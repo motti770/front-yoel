@@ -45,6 +45,9 @@ function ProductDetailModal({
     const [workflow, setWorkflow] = useState(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
+    const [childProducts, setChildProducts] = useState([]);
+    const [allProducts, setAllProducts] = useState([]);
+    const [expandedDesigns, setExpandedDesigns] = useState(new Set());
 
     // Labels
     const labels = {
@@ -142,6 +145,17 @@ function ProductDetailModal({
             const productResult = await productsService.getById(product.id);
             if (productResult.success) {
                 setProductDetails(productResult.data);
+            }
+
+            // Fetch ALL products to find children (design groups and variations)
+            const allProductsResult = await productsService.getAll();
+            if (allProductsResult.success) {
+                const allProds = allProductsResult.data.products || allProductsResult.data || [];
+                setAllProducts(allProds);
+
+                // Find direct children (design groups for base products, or variations for design groups)
+                const children = allProds.filter(p => p.parentProductId === product.id);
+                setChildProducts(children);
             }
 
             // Fetch files for this product
@@ -318,10 +332,13 @@ function ProductDetailModal({
 
         return (
             <div className="tab-content parameters-tab">
-                {parameters.map(assignment => {
-                    const param = assignment.parameter;
+                {parameters.map((assignment, index) => {
+                    // Handle both nested and flat parameter structure
+                    const param = assignment.parameter || assignment;
+                    if (!param || !param.name) return null;
+
                     return (
-                        <div key={param.id} className="parameter-card">
+                        <div key={param.id || index} className="parameter-card">
                             <div className="parameter-header">
                                 <div className="parameter-info">
                                     <h4>{param.name}</h4>
@@ -338,8 +355,8 @@ function ProductDetailModal({
 
                             {param.options && param.options.length > 0 && (
                                 <div className="options-grid">
-                                    {param.options.map(option => (
-                                        <div key={option.id} className="option-item">
+                                    {param.options.map((option, optIndex) => (
+                                        <div key={option.id || optIndex} className="option-item">
                                             {param.type === 'COLOR' && option.colorHex && (
                                                 <div
                                                     className="color-preview"
@@ -478,10 +495,36 @@ function ProductDetailModal({
         );
     };
 
+    // Toggle expanded design group
+    const toggleDesignExpand = (designId) => {
+        setExpandedDesigns(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(designId)) {
+                newSet.delete(designId);
+            } else {
+                newSet.add(designId);
+            }
+            return newSet;
+        });
+    };
+
+    // Get variations for a design group
+    const getVariationsForDesign = (designId) => {
+        return allProducts.filter(p => p.parentProductId === designId);
+    };
+
     const renderSubproductsTab = () => {
-        // Sub-products feature - displays linked products and allows adding new ones
-        const subProducts = productDetails?.subProducts || [];
-        const parentProduct = productDetails?.parentProduct;
+        // Check if this product has parentProductId (meaning it's a child)
+        const parentProduct = product.parentProductId
+            ? allProducts.find(p => p.id === product.parentProductId)
+            : null;
+
+        // Design groups are direct children with isDesignGroup flag
+        const designGroups = childProducts.filter(p => p.isDesignGroup);
+        // Direct variations (if this is a design group showing its variations)
+        const directVariations = childProducts.filter(p => !p.isDesignGroup);
+
+        const hasChildren = childProducts.length > 0;
 
         return (
             <div className="tab-content subproducts-tab">
@@ -493,9 +536,8 @@ function ProductDetailModal({
                             <Package size={20} />
                             <div className="parent-details">
                                 <span className="parent-name">{parentProduct.name}</span>
-                                <span className="parent-sku">{parentProduct.sku}</span>
+                                <span className="parent-sku">{parentProduct.catalogCode || parentProduct.sku}</span>
                             </div>
-                            <span className="parent-price">${parseFloat(parentProduct.price || 0).toLocaleString()}</span>
                         </div>
                     </div>
                 )}
@@ -504,86 +546,147 @@ function ProductDetailModal({
                 <div className="subproducts-header">
                     <h4>
                         <Boxes size={18} />
-                        {language === 'he' ? 'תתי-מוצרים' : 'Sub-Products'} ({subProducts.length})
+                        {language === 'he' ? 'עיצובים ווריאציות' : 'Designs & Variations'} ({childProducts.length})
                     </h4>
-                    <button className="btn btn-outline btn-sm">
-                        <Plus size={14} />
-                        {language === 'he' ? 'הוסף' : 'Add'}
-                    </button>
                 </div>
 
-                {/* Sub-products List */}
-                {subProducts.length === 0 ? (
+                {/* No children */}
+                {!hasChildren ? (
                     <div className="empty-state-inline">
                         <Boxes size={32} />
                         <div className="empty-text">
                             <p>{language === 'he' ? 'אין תתי-מוצרים למוצר זה' : 'No sub-products for this product'}</p>
                             <span>
                                 {language === 'he'
-                                    ? 'תתי-מוצרים מאפשרים ליצור מוצרים מורכבים ממספר חלקים'
-                                    : 'Sub-products allow creating complex products from multiple parts'}
+                                    ? 'מוצר זה הוא מוצר סופי ללא וריאציות נוספות'
+                                    : 'This is a final product without additional variations'}
                             </span>
                         </div>
                     </div>
                 ) : (
-                    <div className="subproducts-list">
-                        {subProducts.map((sub, index) => (
-                            <div key={sub.id || index} className="subproduct-item">
-                                <div className="subproduct-drag">
-                                    <span className="subproduct-number">{index + 1}</span>
-                                </div>
-                                <div className="subproduct-icon">
-                                    <Package size={18} />
-                                </div>
-                                <div className="subproduct-info">
-                                    <span className="subproduct-name">{sub.name}</span>
-                                    <span className="subproduct-sku">{sub.sku}</span>
-                                </div>
-                                <div className="subproduct-qty">
-                                    <span className="qty-label">{language === 'he' ? 'כמות' : 'Qty'}</span>
-                                    <span className="qty-value">{sub.quantity || 1}</span>
-                                </div>
-                                <div className="subproduct-price">
-                                    ${parseFloat(sub.price || 0).toLocaleString()}
-                                </div>
-                                <div className="subproduct-actions">
-                                    <button className="action-btn small" title={language === 'he' ? 'צפייה' : 'View'}>
-                                        <Eye size={14} />
-                                    </button>
-                                    <button className="action-btn small danger" title={language === 'he' ? 'הסר' : 'Remove'}>
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
+                    <>
+                        {/* Design Groups - collapsible */}
+                        {designGroups.length > 0 && (
+                            <div className="design-groups-list">
+                                {designGroups.map((design) => {
+                                    const variations = getVariationsForDesign(design.id);
+                                    const isExpanded = expandedDesigns.has(design.id);
+
+                                    return (
+                                        <div key={design.id} className="design-group-item">
+                                            <div
+                                                className={`design-group-header ${isExpanded ? 'expanded' : ''}`}
+                                                onClick={() => toggleDesignExpand(design.id)}
+                                            >
+                                                <ChevronRight
+                                                    size={18}
+                                                    className={`expand-icon ${isExpanded ? 'rotated' : ''}`}
+                                                />
+                                                <div className="design-info">
+                                                    <span className="design-name">{design.name}</span>
+                                                    <span className="design-code">{design.catalogCode}</span>
+                                                </div>
+                                                <div className="design-meta">
+                                                    <span className="variation-count">
+                                                        {variations.length} {language === 'he' ? 'סגנונות' : 'styles'}
+                                                    </span>
+                                                    {design.basePrice && (
+                                                        <span className="design-price">
+                                                            ${parseFloat(design.basePrice).toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Variations thumbnail grid */}
+                                            {isExpanded && variations.length > 0 && (
+                                                <div className="variations-thumbnail-grid">
+                                                    {variations.map((variation) => (
+                                                        <div key={variation.id} className="variation-thumbnail-card">
+                                                            <div className="thumbnail-image">
+                                                                {variation.imageUrl ? (
+                                                                    <img src={variation.imageUrl} alt={variation.name} />
+                                                                ) : (
+                                                                    <div className="thumbnail-placeholder">
+                                                                        <FileImage size={32} />
+                                                                        <span className="style-letter">
+                                                                            {variation.catalogCode?.split('-')[1] || '?'}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="thumbnail-info">
+                                                                <span className="thumbnail-name">
+                                                                    {variation.catalogCode || variation.name}
+                                                                </span>
+                                                                {variation.colorScheme && (
+                                                                    <span className="thumbnail-scheme">{variation.colorScheme}</span>
+                                                                )}
+                                                                {variation.basePrice && (
+                                                                    <span className="thumbnail-price">
+                                                                        ${parseFloat(variation.basePrice).toLocaleString()}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        ))}
-                    </div>
+                        )}
+
+                        {/* Direct variations (if this is a design group) */}
+                        {directVariations.length > 0 && designGroups.length === 0 && (
+                            <div className="variations-list direct">
+                                <div className="section-label">
+                                    {language === 'he' ? 'סגנונות זמינים' : 'Available Styles'}
+                                </div>
+                                {directVariations.map((variation) => (
+                                    <div key={variation.id} className="variation-item">
+                                        <div className="variation-icon">
+                                            <FileImage size={16} />
+                                        </div>
+                                        <div className="variation-info">
+                                            <span className="variation-name">{variation.name}</span>
+                                            <span className="variation-desc">
+                                                {variation.colorScheme && (
+                                                    <span className="color-scheme">{variation.colorScheme}</span>
+                                                )}
+                                                {variation.description && (
+                                                    <span className="desc-text">{variation.description}</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                        {variation.basePrice && (
+                                            <span className="variation-price">
+                                                ${parseFloat(variation.basePrice).toLocaleString()}
+                                            </span>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
 
-                {/* Sub-products Summary */}
-                {subProducts.length > 0 && (
+                {/* Summary for base products */}
+                {designGroups.length > 0 && (
                     <div className="subproducts-summary">
                         <div className="summary-row">
-                            <span>{language === 'he' ? 'סה"כ חלקים' : 'Total Parts'}</span>
-                            <span className="summary-value">{subProducts.length}</span>
+                            <span>{language === 'he' ? 'קבוצות עיצוב' : 'Design Groups'}</span>
+                            <span className="summary-value">{designGroups.length}</span>
                         </div>
                         <div className="summary-row">
-                            <span>{language === 'he' ? 'עלות רכיבים' : 'Components Cost'}</span>
-                            <span className="summary-value price">
-                                ${subProducts.reduce((sum, sub) => sum + (parseFloat(sub.price || 0) * (sub.quantity || 1)), 0).toLocaleString()}
+                            <span>{language === 'he' ? 'סה"כ וריאציות' : 'Total Variations'}</span>
+                            <span className="summary-value">
+                                {designGroups.reduce((sum, dg) => sum + getVariationsForDesign(dg.id).length, 0)}
                             </span>
                         </div>
                     </div>
                 )}
-
-                {/* Info Box */}
-                <div className="feature-info-box">
-                    <AlertTriangle size={16} />
-                    <span>
-                        {language === 'he'
-                            ? 'תכונה זו בפיתוח. בקרוב תוכל לחבר מוצרים יחד ליצירת מוצרים מורכבים.'
-                            : 'This feature is in development. Soon you\'ll be able to link products together to create complex products.'}
-                    </span>
-                </div>
             </div>
         );
     };

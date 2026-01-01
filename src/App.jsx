@@ -29,7 +29,8 @@ import {
   Info,
   AlertTriangle,
   CheckCircle,
-  Warehouse
+  Warehouse,
+  Shirt
 } from 'lucide-react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
@@ -53,6 +54,8 @@ import ImportPage from './pages/ImportPage';
 import Leads from './pages/Leads';
 import AssetLibrary from './pages/AssetLibrary';
 import StockOrders from './pages/StockOrders';
+import Materials from './pages/Materials';
+import NotificationCenter from './components/NotificationCenter';
 import './App.css';
 
 // Language Context
@@ -81,7 +84,8 @@ const iconMap = {
   Upload,
   Target,
   FolderOpen,
-  Warehouse
+  Warehouse,
+  Shirt
 };
 
 // Protected Route Component
@@ -107,7 +111,6 @@ function ProtectedRoute({ children }) {
 function AppContent() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const { user, logout, isAuthenticated } = useAuth();
@@ -258,7 +261,6 @@ function AppContent() {
                   className="language-btn"
                   onClick={() => {
                     setShowLanguageSwitcher(!showLanguageSwitcher);
-                    setShowNotifications(false);
                     setShowProfileMenu(false);
                   }}
                 >
@@ -325,54 +327,7 @@ function AppContent() {
               </div>
 
               {/* Notifications */}
-              <div className="notifications-wrapper" style={{ position: 'relative' }}>
-                <button
-                  className="icon-button"
-                  onClick={() => {
-                    setShowNotifications(!showNotifications);
-                    setShowProfileMenu(false);
-                    setShowLanguageSwitcher(false);
-                  }}
-                >
-                  <Bell size={20} />
-                  <span className="notification-badge">3</span>
-                </button>
-
-                {showNotifications && (
-                  <div className="dropdown-menu notifications-dropdown">
-                    <div className="dropdown-header">
-                      <h3>{language === 'he' ? 'התראות' : 'Notifications'}</h3>
-                      <button className="text-btn">{language === 'he' ? 'סמן הכל כנקרא' : 'Mark all read'}</button>
-                    </div>
-                    <div className="dropdown-content">
-                      <div className="notification-item unread">
-                        <div className="notif-icon success"><CheckCircle size={16} /></div>
-                        <div className="notif-text">
-                          <p className="notif-title">{language === 'he' ? 'משימת עיצוב הושלמה' : 'Design task completed'}</p>
-                          <p className="notif-time">{language === 'he' ? 'לפני 10 דקות' : '10 mins ago'}</p>
-                        </div>
-                      </div>
-                      <div className="notification-item unread">
-                        <div className="notif-icon info"><Info size={16} /></div>
-                        <div className="notif-text">
-                          <p className="notif-title">{language === 'he' ? 'הזמנה חדשה #ORD-20250129-003' : 'New order #ORD-20250129-003'}</p>
-                          <p className="notif-time">{language === 'he' ? 'לפני 25 דקות' : '25 mins ago'}</p>
-                        </div>
-                      </div>
-                      <div className="notification-item">
-                        <div className="notif-icon warning"><AlertTriangle size={16} /></div>
-                        <div className="notif-text">
-                          <p className="notif-title">{language === 'he' ? 'מלאי בד כחול נמוך - 5 יחידות' : 'Low blue fabric stock - 5 units'}</p>
-                          <p className="notif-time">{language === 'he' ? 'לפני שעתיים' : '2 hours ago'}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="dropdown-footer">
-                      <button className="text-btn-center">{language === 'he' ? 'צפה בכל ההתראות' : 'View all notifications'}</button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <NotificationCenter language={language} />
 
               {/* User Profile */}
               <div className="user-profile-wrapper" style={{ position: 'relative' }}>
@@ -380,7 +335,6 @@ function AppContent() {
                   className="user-profile"
                   onClick={() => {
                     setShowProfileMenu(!showProfileMenu);
-                    setShowNotifications(false);
                     setShowLanguageSwitcher(false);
                   }}
                   style={{ cursor: 'pointer' }}
@@ -485,6 +439,11 @@ function AppContent() {
                   <Parameters currentUser={currentUser} t={t} language={language} />
                 </ProtectedRoute>
               } />
+              <Route path="/materials" element={
+                <ProtectedRoute>
+                  <Materials currentUser={currentUser} t={t} language={language} />
+                </ProtectedRoute>
+              } />
               <Route path="/calendar" element={
                 <ProtectedRoute>
                   <CalendarPage currentUser={currentUser} t={t} language={language} />
@@ -530,13 +489,13 @@ function AppContent() {
 }
 
 function App() {
-  // Seed parochet data on app initialization
-  useEffect(() => {
-    const result = seedParochetData();
-    if (result.success && !result.skipped) {
-      console.log('[App] Parochet data seeded:', result.data);
-    }
-  }, []);
+  // NOTE: seedParochetData disabled - using mock data from api.js instead
+  // useEffect(() => {
+  //   const result = seedParochetData();
+  //   if (result.success && !result.skipped) {
+  //     console.log('[App] Parochet data seeded:', result.data);
+  //   }
+  // }, []);
 
   return (
     <Router>

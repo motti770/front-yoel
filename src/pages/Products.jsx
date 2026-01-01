@@ -22,7 +22,8 @@ import {
     GitBranch,
     FileImage,
     Image,
-    Upload
+    Upload,
+    Sparkles
 } from 'lucide-react';
 import { productsService, workflowsService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
@@ -75,6 +76,10 @@ function Products({ currentUser, t, language }) {
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
+    // Hierarchical view state
+    const [expandedProducts, setExpandedProducts] = useState(new Set());
+    const [allProductsData, setAllProductsData] = useState([]);
+
     // Form state
     const [formData, setFormData] = useState({
         name: '',
@@ -112,9 +117,13 @@ function Products({ currentUser, t, language }) {
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const result = await productsService.getAll({ limit: 100 });
+            const result = await productsService.getAll({ limit: 500 });
             if (result.success) {
-                setProducts(result.data.products || []);
+                const allProducts = result.data.products || [];
+                setAllProductsData(allProducts);
+                // Show only base products (no parent) in main view
+                const baseProducts = allProducts.filter(p => !p.parentProductId);
+                setProducts(baseProducts);
             } else {
                 setError(result.error?.message || 'Failed to load products');
             }
@@ -123,6 +132,30 @@ function Products({ currentUser, t, language }) {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Get child products (design groups or variations)
+    const getChildProducts = (parentId) => {
+        return allProductsData.filter(p => p.parentProductId === parentId);
+    };
+
+    // Toggle expand/collapse for a product
+    const toggleProductExpand = (productId, e) => {
+        e.stopPropagation();
+        setExpandedProducts(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(productId)) {
+                newSet.delete(productId);
+            } else {
+                newSet.add(productId);
+            }
+            return newSet;
+        });
+    };
+
+    // Count children for a product
+    const getChildCount = (productId) => {
+        return allProductsData.filter(p => p.parentProductId === productId).length;
     };
 
     const filteredProducts = products.filter(product => {
@@ -312,6 +345,53 @@ function Products({ currentUser, t, language }) {
         setShowAddModal(true);
     };
 
+    // Demo data for products
+    const demoProductNames = [
+        'פרוכת לארון קודש - דגם מלכות',
+        'מעיל לספר תורה - דגם הדר',
+        'כיסוי בימה - דגם קלאסי',
+        'פרוכת - דגם ירושלים',
+        'מעיל תורה - דגם פרימיום',
+        'כיסוי לתיבה - דגם מהודר',
+        'פרוכת מודרנית - דגם אופק',
+        'מעיל תורה - דגם מסורת'
+    ];
+
+    const demoDescriptions = [
+        'עבודת יד מקצועית, רקמה ידנית על קטיפה איכותית',
+        'רקמה מוזהבת על בד איכותי, כולל כיתוב מותאם אישית',
+        'עיצוב קלאסי עם עיטורים מסורתיים, מתאים לכל בית כנסת',
+        'שילוב של מודרני ומסורתי, צבעים עזים וייחודיים',
+        'עבודה מקצועית בסטנדרטים הגבוהים ביותר',
+        'מותאם אישית לפי מידות ודרישות הלקוח'
+    ];
+
+    const fillDemoProduct = () => {
+        const counter = parseInt(localStorage.getItem('demoProductCounter') || '0') + 1;
+        localStorage.setItem('demoProductCounter', counter.toString());
+
+        const categories = ['RITUAL', 'FURNITURE', 'PERSONAL'];
+        const randomName = demoProductNames[counter % demoProductNames.length];
+        const randomDesc = demoDescriptions[counter % demoDescriptions.length];
+        const randomCategory = categories[counter % categories.length];
+        const randomPrice = 3000 + (counter * 500) + Math.floor(Math.random() * 2000);
+        const randomStock = Math.floor(Math.random() * 50) + 1;
+        const randomWorkflow = workflows.length > 0 ? workflows[counter % workflows.length] : null;
+
+        setFormData({
+            name: `${randomName} #${counter}`,
+            sku: `PRD-${String(counter).padStart(4, '0')}`,
+            description: randomDesc,
+            price: randomPrice.toString(),
+            stockQuantity: randomStock.toString(),
+            category: randomCategory,
+            status: 'ACTIVE',
+            workflowId: randomWorkflow?.id || ''
+        });
+
+        showToast(`מילוי דמו מוצר #${counter}`, 'success');
+    };
+
     // Group handlers
     const addGroup = () => {
         if (!newGroupName.trim()) return;
@@ -469,8 +549,182 @@ function Products({ currentUser, t, language }) {
         </div>
     );
 
-    // GRID VIEW
+    // Render a single product card (reusable)
+    const renderProductCard = (product, level = 0) => {
+        const childCount = getChildCount(product.id);
+        const isExpanded = expandedProducts.has(product.id);
+        const children = isExpanded ? getChildProducts(product.id) : [];
+
+        return (
+            <div key={product.id} className={`product-hierarchy-item level-${level}`}>
+                <div
+                    className={`product-card glass-card ${isExpanded ? 'expanded' : ''} ${childCount > 0 ? 'has-children' : ''}`}
+                    onClick={() => handleView(product)}
+                >
+                    {/* Expand/Collapse button for products with children */}
+                    {childCount > 0 && (
+                        <button
+                            className="expand-btn"
+                            onClick={(e) => toggleProductExpand(product.id, e)}
+                        >
+                            {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                            <span className="child-count">{childCount}</span>
+                        </button>
+                    )}
+
+                    <div className="product-card-checkbox" onClick={(e) => { e.stopPropagation(); toggleProductSelection(product.id); }}>
+                        <input
+                            type="checkbox"
+                            checked={selectedProducts.includes(product.id)}
+                            onChange={() => {}}
+                        />
+                    </div>
+
+                    <div className="product-icon-wrapper">
+                        <Package size={level === 0 ? 32 : 24} />
+                    </div>
+
+                    <div className="product-content">
+                        <div className="product-header">
+                            <h3 className="product-name">{product.name}</h3>
+                            {product.catalogCode && (
+                                <span className="product-code">{product.catalogCode}</span>
+                            )}
+                        </div>
+
+                        <p className="product-description">{product.description || '-'}</p>
+
+                        {product.basePrice && (
+                            <div className="product-price">
+                                ₪{product.basePrice?.toLocaleString()}
+                            </div>
+                        )}
+
+                        {product.isDesignGroup && (
+                            <span className="design-group-badge">
+                                {language === 'he' ? 'קבוצת עיצוב' : 'Design Group'}
+                            </span>
+                        )}
+
+                        {product.colorScheme && (
+                            <span className="variation-badge">
+                                {product.colorScheme}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="product-actions">
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleView(product); }} title={language === 'he' ? 'צפייה' : 'View'}>
+                            <Eye size={16} />
+                        </button>
+                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(product); }} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                            <Edit size={16} />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Render children when expanded - as thumbnail grid */}
+                {isExpanded && children.length > 0 && (
+                    <div className="product-children-grid">
+                        {children.map(child => {
+                            const grandChildCount = getChildCount(child.id);
+                            const isChildExpanded = expandedProducts.has(child.id);
+                            const grandChildren = isChildExpanded ? getChildProducts(child.id) : [];
+
+                            return (
+                                <div key={child.id} className="child-thumbnail-wrapper">
+                                    <div
+                                        className={`child-thumbnail-card ${grandChildCount > 0 ? 'has-children' : ''} ${isChildExpanded ? 'expanded' : ''}`}
+                                        onClick={() => handleView(child)}
+                                    >
+                                        {/* Thumbnail Image */}
+                                        <div className="child-thumbnail-image">
+                                            {child.imageUrl ? (
+                                                <img src={child.imageUrl} alt={child.name} />
+                                            ) : (
+                                                <div className="child-thumbnail-placeholder">
+                                                    {child.isDesignGroup ? (
+                                                        <Layers size={24} />
+                                                    ) : (
+                                                        <FileImage size={24} />
+                                                    )}
+                                                    {child.catalogCode && (
+                                                        <span className="thumbnail-letter">
+                                                            {child.catalogCode.split('-')[1] || child.catalogCode.slice(-2)}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {grandChildCount > 0 && (
+                                                <button
+                                                    className="expand-child-btn"
+                                                    onClick={(e) => toggleProductExpand(child.id, e)}
+                                                >
+                                                    {isChildExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                                    <span>{grandChildCount}</span>
+                                                </button>
+                                            )}
+                                        </div>
+                                        {/* Thumbnail Info */}
+                                        <div className="child-thumbnail-info">
+                                            <span className="child-thumbnail-code">{child.catalogCode || child.name}</span>
+                                            {child.colorScheme && (
+                                                <span className="child-thumbnail-scheme">{child.colorScheme}</span>
+                                            )}
+                                            {child.basePrice && (
+                                                <span className="child-thumbnail-price">₪{child.basePrice.toLocaleString()}</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Grand children (variations) */}
+                                    {isChildExpanded && grandChildren.length > 0 && (
+                                        <div className="grandchild-grid">
+                                            {grandChildren.map(grandChild => (
+                                                <div
+                                                    key={grandChild.id}
+                                                    className="grandchild-card"
+                                                    onClick={() => handleView(grandChild)}
+                                                >
+                                                    <div className="grandchild-image">
+                                                        {grandChild.imageUrl ? (
+                                                            <img src={grandChild.imageUrl} alt={grandChild.name} />
+                                                        ) : (
+                                                            <div className="grandchild-placeholder">
+                                                                <span className="grandchild-letter">
+                                                                    {grandChild.catalogCode?.split('-')[1] || '?'}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="grandchild-info">
+                                                        <span className="grandchild-code">{grandChild.catalogCode}</span>
+                                                        {grandChild.colorScheme && (
+                                                            <span className="grandchild-scheme">{grandChild.colorScheme}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // GRID VIEW - Hierarchical
     const renderGridView = () => (
+        <div className="products-hierarchy">
+            {filteredProducts.map(product => renderProductCard(product, 0))}
+        </div>
+    );
+
+    // GRID VIEW OLD (keeping for reference)
+    const renderGridViewOld = () => (
         <div className="products-grid">
             {filteredProducts.map(product => (
                 <div key={product.id} className="product-card glass-card" onClick={() => handleView(product)}>
@@ -1041,6 +1295,12 @@ function Products({ currentUser, t, language }) {
                         </select>
                     </div>
                     <div className="modal-actions">
+                        {!selectedProduct && (
+                            <button className="btn btn-outline demo-btn" onClick={fillDemoProduct} type="button">
+                                <Sparkles size={16} />
+                                Demo
+                            </button>
+                        )}
                         <button className="btn btn-outline" onClick={() => setShowAddModal(false)} disabled={saving}>{language === 'he' ? 'ביטול' : 'Cancel'}</button>
                         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                             {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}

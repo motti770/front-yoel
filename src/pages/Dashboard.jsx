@@ -268,6 +268,8 @@ function Dashboard({ currentUser, t, language }) {
                                             borderRadius: '12px',
                                             color: '#fff'
                                         }}
+                                        itemStyle={{ color: '#fff' }}
+                                        labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         formatter={(value) => [`$${(value || 0).toLocaleString()}`, language === 'he' ? 'הכנסות' : 'Revenue']}
                                     />
                                     <Line
@@ -312,6 +314,8 @@ function Dashboard({ currentUser, t, language }) {
                                                 borderRadius: '12px',
                                                 color: '#fff'
                                             }}
+                                            itemStyle={{ color: '#fff' }}
+                                            labelStyle={{ color: '#fff', fontWeight: 'bold' }}
                                         />
                                     </PieChart>
                                 </ResponsiveContainer>

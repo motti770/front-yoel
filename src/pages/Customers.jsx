@@ -26,7 +26,8 @@ import {
     GitBranch,
     Calendar as CalendarIcon,
     Loader2,
-    Upload
+    Upload,
+    Sparkles
 } from 'lucide-react';
 import { customersService } from '../services/api';
 import Modal from '../components/Modal';
@@ -249,6 +250,35 @@ function Customers({ currentUser, t, language }) {
         } finally {
             setSaving(false);
         }
+    };
+
+    // Demo data for customers
+    const demoCustomerNames = ['בית כנסת הגדול', 'קהילת אור התורה', 'ישיבת מרכז הרב', 'בית מדרש חכמי לב', 'קהילת שערי רחמים', 'מרכז תורני נתיבות', 'בית כנסת המזרחי', 'קהילת בני ציון'];
+    const demoContacts = ['הרב משה כהן', 'מר יעקב לוי', 'הרב דוד שטרן', 'מר אברהם גולד', 'הרב יצחק פרידמן', 'מר שמואל רוזן'];
+    const demoCities = ['ירושלים', 'בני ברק', 'תל אביב', 'פתח תקווה', 'רמת גן', 'אשדוד', 'חיפה', 'באר שבע'];
+    const demoStreets = ['רח\' הרב קוק', 'רח\' החשמונאים', 'שד\' רוטשילד', 'רח\' בן יהודה', 'רח\' אלנבי', 'רח\' דיזנגוף'];
+
+    const fillDemoCustomer = () => {
+        const counter = parseInt(localStorage.getItem('demoCustomerCounter') || '0') + 1;
+        localStorage.setItem('demoCustomerCounter', counter.toString());
+
+        const randomName = demoCustomerNames[counter % demoCustomerNames.length];
+        const randomContact = demoContacts[counter % demoContacts.length];
+        const randomCity = demoCities[counter % demoCities.length];
+        const randomStreet = demoStreets[counter % demoStreets.length];
+        const randomNumber = Math.floor(1 + Math.random() * 150);
+
+        setFormData({
+            name: `${randomName} #${counter}`,
+            email: `customer${counter}@demo.com`,
+            phone: `05${Math.floor(10000000 + Math.random() * 89999999)}`,
+            companyName: randomName,
+            contactName: randomContact,
+            address: `${randomStreet} ${randomNumber}, ${randomCity}`,
+            notes: `לקוח דמו #${counter} - ${randomCity}`
+        });
+
+        showToast(`מילוי דמו לקוח #${counter}`, 'success');
     };
 
     const handleSave = async () => {
@@ -1050,6 +1080,12 @@ function Customers({ currentUser, t, language }) {
                         </select>
                     </div>
                     <div className="modal-actions">
+                        {!selectedCustomer && (
+                            <button className="btn btn-outline demo-btn" onClick={fillDemoCustomer} type="button">
+                                <Sparkles size={16} />
+                                Demo
+                            </button>
+                        )}
                         <button className="btn btn-outline" onClick={() => setShowAddModal(false)} disabled={saving}>{t('cancel')}</button>
                         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                             {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}

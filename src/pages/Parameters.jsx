@@ -10,19 +10,61 @@ import {
     Check,
     AlertTriangle,
     Loader2,
-    X
+    X,
+    Link2,
+    Eye,
+    LayoutGrid,
+    List,
+    Columns,
+    Maximize2,
+    Minimize2,
+    Square,
+    Settings2,
+    Package,
+    Filter
 } from 'lucide-react';
-import { parametersService } from '../services/api';
+import { parametersService, productsService } from '../services/api';
 import Modal from '../components/Modal';
 import './Parameters.css';
 
+// View settings stored in localStorage
+const VIEW_SETTINGS_KEY = 'parameters_view_settings';
+const getDefaultViewSettings = () => ({
+    size: 'normal',      // 'compact', 'normal', 'large'
+    layout: 'list',      // 'list', 'grid', 'cards'
+    showDescriptions: true
+});
+
 function Parameters({ currentUser, t, language }) {
     const [parameters, setParameters] = useState([]);
+    const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [expandedParam, setExpandedParam] = useState(null);
     const [toast, setToast] = useState(null);
     const [saving, setSaving] = useState(false);
+
+    // Grouping & Filtering
+    const [selectedProductFilter, setSelectedProductFilter] = useState('all');
+    const [collapsedGroups, setCollapsedGroups] = useState({});
+
+    // View settings - loaded from localStorage
+    const [viewSettings, setViewSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem(VIEW_SETTINGS_KEY);
+            return saved ? { ...getDefaultViewSettings(), ...JSON.parse(saved) } : getDefaultViewSettings();
+        } catch {
+            return getDefaultViewSettings();
+        }
+    });
+    const [showViewSettings, setShowViewSettings] = useState(false);
+
+    // Save view settings to localStorage
+    const updateViewSettings = (updates) => {
+        const newSettings = { ...viewSettings, ...updates };
+        setViewSettings(newSettings);
+        localStorage.setItem(VIEW_SETTINGS_KEY, JSON.stringify(newSettings));
+    };
 
     // Modal states
     const [showAddModal, setShowAddModal] = useState(false);
@@ -38,7 +80,8 @@ function Parameters({ currentUser, t, language }) {
         description: '',
         type: 'TEXT',
         isRequired: false,
-        isActive: true
+        isActive: true,
+        showWhen: null  // { parameterId, optionId } - conditional visibility
     });
 
     const [optionFormData, setOptionFormData] = useState({
@@ -53,23 +96,118 @@ function Parameters({ currentUser, t, language }) {
 
     // Fetch data
     useEffect(() => {
-        fetchParameters();
+        fetchData();
     }, []);
 
-    const fetchParameters = async () => {
+    const fetchData = async () => {
         try {
             setLoading(true);
-            const result = await parametersService.getAll({ limit: 100 });
-            if (result.success) {
-                setParameters(result.data.parameters || []);
+            // Fetch both parameters and products in parallel
+            const [paramsResult, productsResult] = await Promise.all([
+                parametersService.getAll({ limit: 100 }),
+                productsService.getAll()
+            ]);
+
+            if (paramsResult.success) {
+                setParameters(paramsResult.data.parameters || []);
             } else {
-                setError(result.error?.message || 'Failed to load parameters');
+                setError(paramsResult.error?.message || 'Failed to load parameters');
+            }
+
+            if (productsResult.success) {
+                // Get only parent products (not variants/design groups)
+                const parentProducts = (productsResult.data.products || []).filter(p => !p.parentProductId);
+                setProducts(parentProducts);
             }
         } catch (err) {
-            setError(err.error?.message || 'Failed to load parameters');
+            setError(err.error?.message || 'Failed to load data');
         } finally {
             setLoading(false);
         }
+    };
+
+    // Get all product IDs for a parameter (supports both productId and productIds)
+    const getParamProductIds = (param) => {
+        if (param.productIds && Array.isArray(param.productIds)) {
+            return param.productIds;
+        }
+        if (param.productId) {
+            return [param.productId];
+        }
+        return ['shared']; // No product = shared/general
+    };
+
+    // Check if parameter belongs to a product
+    const paramBelongsToProduct = (param, productId) => {
+        const paramProducts = getParamProductIds(param);
+        return paramProducts.includes(productId);
+    };
+
+    // Group parameters by product
+    const getGroupedParameters = () => {
+        // Filter by selected product
+        let filtered = parameters;
+        if (selectedProductFilter !== 'all') {
+            filtered = parameters.filter(p => paramBelongsToProduct(p, selectedProductFilter));
+        }
+
+        // Group by productId (shared parameters appear in 'shared' group)
+        const groups = {};
+
+        filtered.forEach(param => {
+            const productIds = getParamProductIds(param);
+
+            // If filtering by specific product, only show in that product's group
+            if (selectedProductFilter !== 'all') {
+                if (!groups[selectedProductFilter]) {
+                    groups[selectedProductFilter] = [];
+                }
+                groups[selectedProductFilter].push(param);
+            } else {
+                // Show in each product group it belongs to
+                // But for shared, show in 'shared' group
+                if (productIds.includes('shared') || productIds.length > 1) {
+                    if (!groups['shared']) {
+                        groups['shared'] = [];
+                    }
+                    groups['shared'].push(param);
+                } else {
+                    const productId = productIds[0];
+                    if (!groups[productId]) {
+                        groups[productId] = [];
+                    }
+                    groups[productId].push(param);
+                }
+            }
+        });
+
+        // Sort: 'shared' first, then products
+        const sortedGroups = {};
+        if (groups['shared']) {
+            sortedGroups['shared'] = groups['shared'];
+        }
+        Object.keys(groups).filter(k => k !== 'shared').sort().forEach(key => {
+            sortedGroups[key] = groups[key];
+        });
+
+        return sortedGroups;
+    };
+
+    // Get product name by ID
+    const getProductName = (productId) => {
+        if (productId === 'general' || productId === 'shared') {
+            return language === 'he' ? 'משותף לכל המוצרים' : 'Shared';
+        }
+        const product = products.find(p => p.id === productId);
+        return product?.name || productId;
+    };
+
+    // Toggle group collapse
+    const toggleGroupCollapse = (productId) => {
+        setCollapsedGroups(prev => ({
+            ...prev,
+            [productId]: !prev[productId]
+        }));
     };
 
     const showToast = (message, type = 'success') => {
@@ -86,7 +224,8 @@ function Parameters({ currentUser, t, language }) {
             description: '',
             type: 'TEXT',
             isRequired: false,
-            isActive: true
+            isActive: true,
+            showWhen: null
         });
         setShowAddModal(true);
     };
@@ -99,9 +238,22 @@ function Parameters({ currentUser, t, language }) {
             description: param.description || '',
             type: param.type || 'TEXT',
             isRequired: param.isRequired || false,
-            isActive: param.isActive !== false
+            isActive: param.isActive !== false,
+            showWhen: param.showWhen || null
         });
         setShowAddModal(true);
+    };
+
+    // Get parameters that can be used as conditions (same product, has options)
+    const getConditionableParams = () => {
+        if (!selectedParam) return [];
+        const currentProductId = selectedParam.productId;
+        return parameters.filter(p =>
+            p.id !== selectedParam?.id &&  // Not the current parameter
+            p.productId === currentProductId &&  // Same product
+            (p.type === 'SELECT' || p.type === 'BOOLEAN' || p.type === 'COLOR') &&  // Has options
+            p.options?.length > 0  // Has at least one option
+        );
     };
 
     const handleSaveParam = async () => {
@@ -202,7 +354,7 @@ function Parameters({ currentUser, t, language }) {
             if (selectedOption) {
                 const result = await parametersService.updateOption(selectedParam.id, selectedOption.id, optionFormData);
                 if (result.success) {
-                    await fetchParameters();
+                    await fetchData();
                     showToast(language === 'he' ? 'אפשרות עודכנה' : 'Option updated');
                 } else {
                     showToast(result.error?.message || 'Failed to update option', 'error');
@@ -211,7 +363,7 @@ function Parameters({ currentUser, t, language }) {
             } else {
                 const result = await parametersService.addOption(selectedParam.id, optionFormData);
                 if (result.success) {
-                    await fetchParameters();
+                    await fetchData();
                     showToast(language === 'he' ? 'אפשרות נוספה' : 'Option added');
                 } else {
                     showToast(result.error?.message || 'Failed to add option', 'error');
@@ -232,7 +384,7 @@ function Parameters({ currentUser, t, language }) {
         try {
             const result = await parametersService.deleteOption(param.id, option.id);
             if (result.success) {
-                await fetchParameters();
+                await fetchData();
                 showToast(language === 'he' ? 'אפשרות נמחקה' : 'Option deleted');
             } else {
                 showToast(result.error?.message || 'Failed to delete option', 'error');
@@ -277,7 +429,7 @@ function Parameters({ currentUser, t, language }) {
                 <div className="error-container">
                     <AlertTriangle size={40} />
                     <p>{error}</p>
-                    <button className="btn btn-primary" onClick={fetchParameters}>
+                    <button className="btn btn-primary" onClick={fetchData}>
                         {language === 'he' ? 'נסה שוב' : 'Try Again'}
                     </button>
                 </div>
@@ -302,16 +454,107 @@ function Parameters({ currentUser, t, language }) {
                     <h2>{language === 'he' ? 'פרמטרים' : 'Parameters'}</h2>
                     <p>{parameters.length} {language === 'he' ? 'פרמטרים' : 'parameters'}</p>
                 </div>
-                {canEdit && (
-                    <button className="btn btn-primary" onClick={handleAddParam}>
-                        <Plus size={18} />
-                        {language === 'he' ? 'פרמטר חדש' : 'New Parameter'}
-                    </button>
-                )}
+
+                <div className="header-actions">
+                    {/* Product Filter */}
+                    <div className="product-filter">
+                        <Filter size={16} />
+                        <select
+                            value={selectedProductFilter}
+                            onChange={(e) => setSelectedProductFilter(e.target.value)}
+                            className="filter-select"
+                        >
+                            <option value="all">{language === 'he' ? 'כל המוצרים' : 'All Products'}</option>
+                            {products.map(product => (
+                                <option key={product.id} value={product.id}>{product.name}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* View Controls */}
+                    <div className="view-controls">
+                        {/* Size Toggle */}
+                        <div className="view-toggle size-toggle">
+                            <button
+                                className={`toggle-btn ${viewSettings.size === 'compact' ? 'active' : ''}`}
+                                onClick={() => updateViewSettings({ size: 'compact' })}
+                                title={language === 'he' ? 'קומפקטי' : 'Compact'}
+                            >
+                                <Minimize2 size={16} />
+                            </button>
+                            <button
+                                className={`toggle-btn ${viewSettings.size === 'normal' ? 'active' : ''}`}
+                                onClick={() => updateViewSettings({ size: 'normal' })}
+                                title={language === 'he' ? 'רגיל' : 'Normal'}
+                            >
+                                <Square size={16} />
+                            </button>
+                            <button
+                                className={`toggle-btn ${viewSettings.size === 'large' ? 'active' : ''}`}
+                                onClick={() => updateViewSettings({ size: 'large' })}
+                                title={language === 'he' ? 'גדול' : 'Large'}
+                            >
+                                <Maximize2 size={16} />
+                            </button>
+                        </div>
+
+                        {/* Layout Toggle */}
+                        <div className="view-toggle layout-toggle">
+                            <button
+                                className={`toggle-btn ${viewSettings.layout === 'list' ? 'active' : ''}`}
+                                onClick={() => updateViewSettings({ layout: 'list' })}
+                                title={language === 'he' ? 'רשימה' : 'List'}
+                            >
+                                <List size={16} />
+                            </button>
+                            <button
+                                className={`toggle-btn ${viewSettings.layout === 'grid' ? 'active' : ''}`}
+                                onClick={() => updateViewSettings({ layout: 'grid' })}
+                                title={language === 'he' ? 'רשת' : 'Grid'}
+                            >
+                                <LayoutGrid size={16} />
+                            </button>
+                            <button
+                                className={`toggle-btn ${viewSettings.layout === 'cards' ? 'active' : ''}`}
+                                onClick={() => updateViewSettings({ layout: 'cards' })}
+                                title={language === 'he' ? 'כרטיסים' : 'Cards'}
+                            >
+                                <Columns size={16} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {canEdit && (
+                        <button className="btn btn-primary" onClick={handleAddParam}>
+                            <Plus size={18} />
+                            {language === 'he' ? 'פרמטר חדש' : 'New Parameter'}
+                        </button>
+                    )}
+                </div>
             </div>
 
-            <div className="parameters-list">
-                {parameters.map(param => (
+            {/* Grouped Parameters */}
+            {Object.entries(getGroupedParameters()).map(([productId, groupParams]) => (
+                <div key={productId} className="parameter-group">
+                    {/* Group Header */}
+                    <div
+                        className="group-header"
+                        onClick={() => toggleGroupCollapse(productId)}
+                    >
+                        <div className="group-info">
+                            <Package size={20} />
+                            <h3>{getProductName(productId)}</h3>
+                            <span className="group-count">{groupParams.length}</span>
+                        </div>
+                        <button className="expand-btn">
+                            {collapsedGroups[productId] ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                        </button>
+                    </div>
+
+                    {/* Group Content */}
+                    {!collapsedGroups[productId] && (
+                        <div className={`parameters-list layout-${viewSettings.layout} size-${viewSettings.size}`}>
+                            {groupParams.map(param => (
                     <div key={param.id} className="parameter-card glass-card">
                         <div
                             className="param-header"
@@ -331,6 +574,12 @@ function Parameters({ currentUser, t, language }) {
                                     <span className="code-badge">{param.code}</span>
                                     {param.isRequired && <span className="required-badge">{language === 'he' ? 'חובה' : 'Required'}</span>}
                                     {(param.options?.length || 0) > 0 && <span className="options-count">{param.options.length} {language === 'he' ? 'אפשרויות' : 'options'}</span>}
+                                    {param.showWhen && (
+                                        <span className="param-condition-badge">
+                                            <Link2 size={10} />
+                                            {language === 'he' ? 'מותנה' : 'Conditional'}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
@@ -394,14 +643,17 @@ function Parameters({ currentUser, t, language }) {
                         )}
                     </div>
                 ))}
-
-                {parameters.length === 0 && (
-                    <div className="empty-state">
-                        <Sliders size={48} />
-                        <p>{language === 'he' ? 'לא נמצאו פרמטרים' : 'No parameters found'}</p>
-                    </div>
-                )}
+                </div>
+            )}
             </div>
+        ))}
+
+            {parameters.length === 0 && (
+                <div className="empty-state">
+                    <Sliders size={48} />
+                    <p>{language === 'he' ? 'לא נמצאו פרמטרים' : 'No parameters found'}</p>
+                </div>
+            )}
 
             {/* Add/Edit Parameter Modal */}
             <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={selectedParam ? (language === 'he' ? 'עריכת פרמטר' : 'Edit Parameter') : (language === 'he' ? 'פרמטר חדש' : 'New Parameter')}>
@@ -434,6 +686,89 @@ function Parameters({ currentUser, t, language }) {
                             {language === 'he' ? 'שדה חובה' : 'Required field'}
                         </label>
                     </div>
+
+                    {/* Conditional Visibility - showWhen */}
+                    {selectedParam && getConditionableParams().length > 0 && (
+                        <div className="form-group condition-section">
+                            <label>
+                                <Eye size={14} style={{ marginLeft: '4px' }} />
+                                {language === 'he' ? 'הצג בתנאי' : 'Show When'}
+                            </label>
+                            <div className="condition-config">
+                                <select
+                                    className="form-input"
+                                    value={formData.showWhen?.parameterId || ''}
+                                    onChange={(e) => {
+                                        if (e.target.value === '') {
+                                            setFormData({ ...formData, showWhen: null });
+                                        } else {
+                                            setFormData({
+                                                ...formData,
+                                                showWhen: { parameterId: e.target.value, operator: 'equals', optionId: '' }
+                                            });
+                                        }
+                                    }}
+                                >
+                                    <option value="">{language === 'he' ? '-- תמיד מוצג --' : '-- Always visible --'}</option>
+                                    {getConditionableParams().map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+
+                                {formData.showWhen?.parameterId && (
+                                    <>
+                                        {/* Operator selection */}
+                                        <select
+                                            className="form-input operator-select"
+                                            value={formData.showWhen?.operator || 'equals'}
+                                            onChange={(e) => setFormData({
+                                                ...formData,
+                                                showWhen: {
+                                                    ...formData.showWhen,
+                                                    operator: e.target.value,
+                                                    optionId: ['exists', 'not_exists'].includes(e.target.value) ? '' : formData.showWhen?.optionId
+                                                }
+                                            })}
+                                        >
+                                            <option value="equals">{language === 'he' ? '= שווה ל' : '= equals'}</option>
+                                            <option value="not_equals">{language === 'he' ? '≠ שונה מ' : '≠ not equals'}</option>
+                                            <option value="exists">{language === 'he' ? '✓ קיים ערך' : '✓ has value'}</option>
+                                            <option value="not_exists">{language === 'he' ? '✗ ריק' : '✗ is empty'}</option>
+                                        </select>
+
+                                        {/* Value selection - only for equals/not_equals */}
+                                        {['equals', 'not_equals'].includes(formData.showWhen?.operator || 'equals') && (
+                                            <select
+                                                className="form-input"
+                                                value={formData.showWhen?.optionId || ''}
+                                                onChange={(e) => setFormData({
+                                                    ...formData,
+                                                    showWhen: { ...formData.showWhen, optionId: e.target.value }
+                                                })}
+                                            >
+                                                <option value="">{language === 'he' ? '-- בחר ערך --' : '-- Select value --'}</option>
+                                                {parameters.find(p => p.id === formData.showWhen.parameterId)?.options?.map(opt => (
+                                                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                                                ))}
+                                            </select>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+                            <p className="condition-hint">
+                                {language === 'he'
+                                    ? formData.showWhen?.operator === 'exists'
+                                        ? 'השדה יוצג כשיש ערך בשדה הנבחר'
+                                        : formData.showWhen?.operator === 'not_exists'
+                                        ? 'השדה יוצג כשאין ערך בשדה הנבחר'
+                                        : formData.showWhen?.operator === 'not_equals'
+                                        ? 'השדה יוצג כשהערך שונה מהערך הנבחר'
+                                        : 'השדה יוצג כשהערך שווה לערך הנבחר'
+                                    : 'This field will show based on the selected condition'}
+                            </p>
+                        </div>
+                    )}
+
                     <div className="modal-actions">
                         <button className="btn btn-outline" onClick={() => setShowAddModal(false)} disabled={saving}>{language === 'he' ? 'ביטול' : 'Cancel'}</button>
                         <button className="btn btn-primary" onClick={handleSaveParam} disabled={saving}>

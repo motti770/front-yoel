@@ -25,12 +25,14 @@ import {
     GripVertical,
     Upload,
     X as XIcon,
-    PlayCircle
+    PlayCircle,
+    Sparkles
 } from 'lucide-react';
-import { ordersService, customersService, productsService, tasksService, workflowsService, filesService } from '../services/api';
+import { ordersService, customersService, productsService, tasksService, workflowsService, filesService, materialsService } from '../services/api';
 import { ViewSwitcher, VIEW_TYPES } from '../components/ViewSwitcher';
 import Modal from '../components/Modal';
 import ProductConfigurator from '../components/ProductConfigurator';
+import MaterialSelector from '../components/MaterialSelector';
 import './Orders.css';
 
 function Orders({ currentUser, t, language }) {
@@ -72,7 +74,7 @@ function Orders({ currentUser, t, language }) {
     // Wizard steps
     const [wizardStep, setWizardStep] = useState(1);
 
-    // New order form - enhanced with workflow and assets
+    // New order form - enhanced with workflow, assets and materials
     const [newOrderForm, setNewOrderForm] = useState({
         customerId: '',
         items: [{
@@ -81,7 +83,9 @@ function Orders({ currentUser, t, language }) {
             unitPrice: 0,
             selectedParameters: [],
             workflowId: '',
-            assets: [] // Files to upload
+            assets: [], // Files to upload
+            selectedMaterials: [], // Materials (fabrics, threads, etc.)
+            materialWarnings: [] // Stock warnings for materials
         }],
         notes: '',
         dueDate: ''
@@ -176,18 +180,45 @@ function Orders({ currentUser, t, language }) {
 
     const statusColors = {
         PENDING: '#fee140',
+        PENDING_PAYMENT: '#f59e0b', // Orange - waiting for deposit
+        DEPOSIT_PAID: '#10b981', // Green - deposit received
+        IN_PRODUCTION: '#4facfe', // Blue - in production
         PROCESSING: '#4facfe',
         COMPLETED: '#00f2fe',
         CANCELLED: '#ff6b6b'
     };
 
     const statusLabels = {
-        he: { PENDING: 'ממתין', PROCESSING: 'בעיבוד', COMPLETED: 'הושלם', CANCELLED: 'בוטל' },
-        uk: { PENDING: 'Очікує', PROCESSING: 'Обробка', COMPLETED: 'Виконано', CANCELLED: 'Скасовано' },
-        en: { PENDING: 'Pending', PROCESSING: 'Processing', COMPLETED: 'Completed', CANCELLED: 'Cancelled' }
+        he: {
+            PENDING: 'ממתין',
+            PENDING_PAYMENT: 'ממתין לתשלום',
+            DEPOSIT_PAID: 'מקדמה שולמה',
+            IN_PRODUCTION: 'בייצור',
+            PROCESSING: 'בעיבוד',
+            COMPLETED: 'הושלם',
+            CANCELLED: 'בוטל'
+        },
+        uk: {
+            PENDING: 'Очікує',
+            PENDING_PAYMENT: 'Очікує оплати',
+            DEPOSIT_PAID: 'Депозит сплачено',
+            IN_PRODUCTION: 'У виробництві',
+            PROCESSING: 'Обробка',
+            COMPLETED: 'Виконано',
+            CANCELLED: 'Скасовано'
+        },
+        en: {
+            PENDING: 'Pending',
+            PENDING_PAYMENT: 'Awaiting Payment',
+            DEPOSIT_PAID: 'Deposit Paid',
+            IN_PRODUCTION: 'In Production',
+            PROCESSING: 'Processing',
+            COMPLETED: 'Completed',
+            CANCELLED: 'Cancelled'
+        }
     };
 
-    const getStatusLabel = (status) => statusLabels[language]?.[status] || statusLabels.he[status];
+    const getStatusLabel = (status) => statusLabels[language]?.[status] || statusLabels.he[status] || status;
 
     // Handlers
     const handleView = (order) => {
@@ -222,6 +253,36 @@ function Orders({ currentUser, t, language }) {
             }
         } catch (err) {
             showToast(err.error?.message || 'Failed to cancel order', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Confirm deposit payment - unlocks production
+    const handleConfirmDeposit = async (order, depositAmount) => {
+        try {
+            setSaving(true);
+            const result = await ordersService.confirmDeposit(order.id, depositAmount);
+            if (result.success) {
+                // Update order in state
+                setOrders(orders.map(o =>
+                    o.id === order.id ? result.data : o
+                ));
+                // Refresh tasks
+                const tasksRes = await tasksService.getAll({ limit: 100 });
+                if (tasksRes.success) {
+                    const tasksData = tasksRes.data?.tasks || tasksRes.data?.items || (Array.isArray(tasksRes.data) ? tasksRes.data : []);
+                    setTasks(tasksData);
+                }
+                if (selectedOrder?.id === order.id) {
+                    setSelectedOrder(result.data);
+                }
+                showToast(language === 'he' ? 'מקדמה אושרה - הייצור התחיל!' : 'Deposit confirmed - production started!');
+            } else {
+                showToast(result.error?.message || 'Failed to confirm deposit', 'error');
+            }
+        } catch (err) {
+            showToast(err.error?.message || 'Failed to confirm deposit', 'error');
         } finally {
             setSaving(false);
         }
@@ -319,9 +380,72 @@ function Orders({ currentUser, t, language }) {
                 unitPrice: 0,
                 selectedParameters: [],
                 workflowId: '',
-                assets: []
+                assets: [],
+                selectedMaterials: [],
+                materialWarnings: []
             }]
         });
+    };
+
+    // Demo data for orders
+    const demoNotes = [
+        'לקוח VIP - יש לתת עדיפות',
+        'רקמה מיוחדת לפי דוגמא שנשלחה במייל',
+        'יש להתקשר לאישור צבעים לפני תחילת העבודה',
+        'הזמנה חוזרת - לפי דוגמא קודמת #2023-156',
+        'דחוף! יש אירוע בעוד 3 שבועות',
+        'נא לשים לב לפרטים המיוחדים של הלקוח'
+    ];
+
+    const fillDemoOrder = () => {
+        const counter = parseInt(localStorage.getItem('demoOrderCounter') || '0') + 1;
+        localStorage.setItem('demoOrderCounter', counter.toString());
+
+        // Pick random customer
+        const randomCustomer = customers.length > 0
+            ? customers[counter % customers.length]
+            : null;
+
+        // Pick random product(s)
+        const availableProducts = products.filter(p => !p.isDesignGroup);
+        const numProducts = 1 + (counter % 3); // 1-3 products
+        const selectedProducts = [];
+
+        for (let i = 0; i < numProducts && i < availableProducts.length; i++) {
+            const productIdx = (counter + i) % availableProducts.length;
+            const product = availableProducts[productIdx];
+            const workflow = workflows.find(w => w.productId === product.id) || (workflows.length > 0 ? workflows[counter % workflows.length] : null);
+
+            selectedProducts.push({
+                productId: product.id,
+                quantity: 1 + (counter % 5),
+                unitPrice: product.basePrice || product.price || 5000,
+                selectedParameters: [],
+                workflowId: workflow?.id || '',
+                assets: []
+            });
+        }
+
+        // Generate due date (2-8 weeks from now)
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 14 + (counter % 42));
+        const dueDateStr = dueDate.toISOString().split('T')[0];
+
+        setNewOrderForm({
+            customerId: randomCustomer?.id || '',
+            items: selectedProducts.length > 0 ? selectedProducts : [{
+                productId: availableProducts[0]?.id || '',
+                quantity: 1,
+                unitPrice: availableProducts[0]?.basePrice || 5000,
+                selectedParameters: [],
+                workflowId: '',
+                assets: []
+            }],
+            notes: demoNotes[counter % demoNotes.length],
+            dueDate: dueDateStr
+        });
+
+        showToast(`מילוי דמו הזמנה #${counter}`, 'success');
     };
 
     // Handle file upload for order item
@@ -365,10 +489,24 @@ function Orders({ currentUser, t, language }) {
             return;
         }
 
+        // Check for critical stock issues
+        const criticalWarnings = newOrderForm.items.flatMap(item =>
+            (item.materialWarnings || []).filter(w => w.type === 'critical')
+        );
+        if (criticalWarnings.length > 0) {
+            showToast(
+                language === 'he'
+                    ? 'לא ניתן ליצור הזמנה - חומרים חסרים במלאי'
+                    : 'Cannot create order - materials out of stock',
+                'error'
+            );
+            return;
+        }
+
         try {
             setSaving(true);
 
-            // 1. Create order
+            // 1. Create order with materials
             const orderData = {
                 customerId: newOrderForm.customerId,
                 items: newOrderForm.items.filter(i => i.productId).map(item => ({
@@ -376,7 +514,8 @@ function Orders({ currentUser, t, language }) {
                     quantity: item.quantity,
                     unitPrice: item.unitPrice,
                     selectedParameters: item.selectedParameters || [],
-                    workflowId: item.workflowId || null
+                    workflowId: item.workflowId || null,
+                    selectedMaterials: item.selectedMaterials || []
                 })),
                 notes: newOrderForm.notes,
                 dueDate: newOrderForm.dueDate || null
@@ -389,7 +528,23 @@ function Orders({ currentUser, t, language }) {
 
             const newOrder = result.data;
 
-            // 2. Upload assets for each item
+            // 2. Reserve materials (deduct from inventory)
+            for (const item of newOrderForm.items) {
+                if (item.selectedMaterials && item.selectedMaterials.length > 0) {
+                    try {
+                        const materialItems = item.selectedMaterials.map(m => ({
+                            materialId: m.materialId,
+                            quantity: item.quantity // In real implementation, might calculate actual usage
+                        }));
+                        await materialsService.reserveForOrder(newOrder.id, materialItems);
+                    } catch (materialErr) {
+                        console.warn('Failed to reserve materials:', materialErr);
+                        // Continue even if material reservation fails
+                    }
+                }
+            }
+
+            // 3. Upload assets for each item
             for (let i = 0; i < newOrderForm.items.length; i++) {
                 const item = newOrderForm.items[i];
                 if (item.assets && item.assets.length > 0) {
@@ -403,7 +558,7 @@ function Orders({ currentUser, t, language }) {
                 }
             }
 
-            // 3. Auto-generate tasks if workflow is selected
+            // 4. Auto-generate tasks if workflow is selected
             if (newOrderForm.items.some(i => i.workflowId)) {
                 try {
                     // Create tasks for items with workflows
@@ -431,7 +586,7 @@ function Orders({ currentUser, t, language }) {
                 }
             }
 
-            // 4. Update UI
+            // 5. Update UI
             setOrders([newOrder, ...orders]);
             setShowAddModal(false);
             setWizardStep(1);
@@ -443,7 +598,9 @@ function Orders({ currentUser, t, language }) {
                     unitPrice: 0,
                     selectedParameters: [],
                     workflowId: '',
-                    assets: []
+                    assets: [],
+                    selectedMaterials: [],
+                    materialWarnings: []
                 }],
                 notes: '',
                 dueDate: ''
@@ -608,6 +765,8 @@ function Orders({ currentUser, t, language }) {
                                     }}
                                 >
                                     <option value="PENDING">{getStatusLabel('PENDING')}</option>
+                                    <option value="PENDING_PAYMENT">{getStatusLabel('PENDING_PAYMENT')}</option>
+                                    <option value="IN_PRODUCTION">{getStatusLabel('IN_PRODUCTION')}</option>
                                     <option value="PROCESSING">{getStatusLabel('PROCESSING')}</option>
                                     <option value="COMPLETED">{getStatusLabel('COMPLETED')}</option>
                                     <option value="CANCELLED">{getStatusLabel('CANCELLED')}</option>
@@ -680,6 +839,8 @@ function Orders({ currentUser, t, language }) {
                             onChange={(e) => handleStatusChange(order.id, e.target.value)}
                         >
                             <option value="PENDING">{getStatusLabel('PENDING')}</option>
+                            <option value="PENDING_PAYMENT">{getStatusLabel('PENDING_PAYMENT')}</option>
+                            <option value="IN_PRODUCTION">{getStatusLabel('IN_PRODUCTION')}</option>
                             <option value="PROCESSING">{getStatusLabel('PROCESSING')}</option>
                             <option value="COMPLETED">{getStatusLabel('COMPLETED')}</option>
                             <option value="CANCELLED">{getStatusLabel('CANCELLED')}</option>
@@ -721,7 +882,7 @@ function Orders({ currentUser, t, language }) {
 
     // KANBAN VIEW
     const renderKanbanView = () => {
-        const statuses = ['PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED'];
+        const statuses = ['PENDING_PAYMENT', 'IN_PRODUCTION', 'COMPLETED', 'CANCELLED'];
         return (
             <div className="kanban-board">
                 {statuses.map(status => (
@@ -915,6 +1076,8 @@ function Orders({ currentUser, t, language }) {
                         >
                             <option value="all">{t?.('all') || 'All'}</option>
                             <option value="PENDING">{getStatusLabel('PENDING')}</option>
+                            <option value="PENDING_PAYMENT">{getStatusLabel('PENDING_PAYMENT')}</option>
+                            <option value="IN_PRODUCTION">{getStatusLabel('IN_PRODUCTION')}</option>
                             <option value="PROCESSING">{getStatusLabel('PROCESSING')}</option>
                             <option value="COMPLETED">{getStatusLabel('COMPLETED')}</option>
                             <option value="CANCELLED">{getStatusLabel('CANCELLED')}</option>
@@ -1049,6 +1212,24 @@ function Orders({ currentUser, t, language }) {
                                                         ...newItems[idx],
                                                         selectedParameters: config.selectedParameters,
                                                         unitPrice: parseFloat(config.finalPrice) || item.unitPrice
+                                                    };
+                                                    setNewOrderForm({ ...newOrderForm, items: newItems });
+                                                }}
+                                            />
+                                        )}
+
+                                        {/* Material Selection (Fabrics, Threads, etc.) */}
+                                        {selectedProduct && (
+                                            <MaterialSelector
+                                                productId={selectedProduct.id}
+                                                quantity={item.quantity}
+                                                language={language}
+                                                onMaterialsChange={(materialData) => {
+                                                    const newItems = [...newOrderForm.items];
+                                                    newItems[idx] = {
+                                                        ...newItems[idx],
+                                                        selectedMaterials: materialData.selectedMaterials,
+                                                        materialWarnings: materialData.stockWarnings
                                                     };
                                                     setNewOrderForm({ ...newOrderForm, items: newItems });
                                                 }}
@@ -1195,6 +1376,10 @@ function Orders({ currentUser, t, language }) {
 
                     {/* Wizard Navigation */}
                     <div className="modal-actions" style={{ marginTop: '24px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
+                        <button className="btn btn-outline demo-btn" onClick={fillDemoOrder} type="button">
+                            <Sparkles size={16} />
+                            Demo
+                        </button>
                         <button
                             className="btn btn-outline"
                             onClick={() => wizardStep === 1 ? setShowAddModal(false) : prevStep()}
@@ -1267,6 +1452,32 @@ function Orders({ currentUser, t, language }) {
                             </table>
                         </div>
 
+                        {/* Product Configuration Section */}
+                        {selectedOrder.productConfiguration && Object.keys(selectedOrder.productConfiguration).length > 0 && (
+                            <div className="detail-section">
+                                <h4>{language === 'he' ? 'הגדרות המוצר' : 'Product Configuration'}</h4>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                                    gap: '12px',
+                                    padding: '12px',
+                                    background: 'var(--bg-hover)',
+                                    borderRadius: '8px'
+                                }}>
+                                    {Object.entries(selectedOrder.productConfiguration).map(([key, value]) => (
+                                        <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                {key}
+                                            </span>
+                                            <span style={{ fontWeight: '500' }}>
+                                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {selectedOrder.tasks && selectedOrder.tasks.length > 0 && (
                             <div className="detail-section">
                                 <h4>{language === 'he' ? 'התקדמות ייצור' : 'Production Progress'}</h4>
@@ -1320,14 +1531,53 @@ function Orders({ currentUser, t, language }) {
                             </div>
                         )}
 
+                        {/* Payment Status Section */}
+                        {(selectedOrder.status === 'PENDING_PAYMENT' || selectedOrder.paymentStatus) && (
+                            <div className="detail-section" style={{
+                                background: selectedOrder.status === 'PENDING_PAYMENT' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                                border: `1px solid ${selectedOrder.status === 'PENDING_PAYMENT' ? '#f59e0b' : '#10b981'}`,
+                                borderRadius: '12px',
+                                padding: '16px'
+                            }}>
+                                <h4 style={{ color: selectedOrder.status === 'PENDING_PAYMENT' ? '#f59e0b' : '#10b981', marginBottom: '12px' }}>
+                                    {language === 'he' ? 'סטטוס תשלום' : 'Payment Status'}
+                                </h4>
+                                {selectedOrder.status === 'PENDING_PAYMENT' ? (
+                                    <div>
+                                        <p style={{ marginBottom: '12px' }}>
+                                            {language === 'he'
+                                                ? 'ההזמנה ממתינה לתשלום מקדמה. הייצור יתחיל רק לאחר אישור התשלום.'
+                                                : 'Order is awaiting deposit. Production will start after payment confirmation.'}
+                                        </p>
+                                        <button
+                                            className="btn btn-primary"
+                                            onClick={() => handleConfirmDeposit(selectedOrder, selectedOrder.totalPrice * 0.5)}
+                                            disabled={saving}
+                                            style={{ background: '#10b981', border: 'none' }}
+                                        >
+                                            {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}
+                                            {language === 'he' ? 'אישור קבלת מקדמה' : 'Confirm Deposit Received'}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <p><strong>{language === 'he' ? 'מקדמה:' : 'Deposit:'}</strong> ₪{(selectedOrder.depositAmount || 0).toLocaleString()}</p>
+                                        <p><strong>{language === 'he' ? 'תאריך תשלום:' : 'Paid on:'}</strong> {selectedOrder.depositPaidAt?.split('T')[0] || '-'}</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="modal-actions">
                             <button className="btn btn-outline" onClick={() => setShowViewModal(false)}>
                                 {t?.('close') || 'Close'}
                             </button>
-                            <button className="btn btn-primary" onClick={generateProductionTask} disabled={saving} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', border: 'none' }}>
-                                {saving ? <Loader2 className="spinner" size={16} /> : <Package size={16} />}
-                                {language === 'he' ? 'שלח לייצור' : 'Send to Production'}
-                            </button>
+                            {selectedOrder.status !== 'PENDING_PAYMENT' && (
+                                <button className="btn btn-primary" onClick={generateProductionTask} disabled={saving} style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', border: 'none' }}>
+                                    {saving ? <Loader2 className="spinner" size={16} /> : <Package size={16} />}
+                                    {language === 'he' ? 'שלח לייצור' : 'Send to Production'}
+                                </button>
+                            )}
                             <select
                                 className="status-select"
                                 value={selectedOrder.status}
@@ -1341,6 +1591,8 @@ function Orders({ currentUser, t, language }) {
                                 }}
                             >
                                 <option value="PENDING">{getStatusLabel('PENDING')}</option>
+                                <option value="PENDING_PAYMENT">{getStatusLabel('PENDING_PAYMENT')}</option>
+                                <option value="IN_PRODUCTION">{getStatusLabel('IN_PRODUCTION')}</option>
                                 <option value="PROCESSING">{getStatusLabel('PROCESSING')}</option>
                                 <option value="COMPLETED">{getStatusLabel('COMPLETED')}</option>
                                 <option value="CANCELLED">{getStatusLabel('CANCELLED')}</option>
