@@ -7,6 +7,7 @@ import axios from 'axios';
 
 // ============ MOCK MODE ============
 // Set to true to use mock data (when backend is down)
+// TODO: Change to false when backend is back online
 const MOCK_MODE = true;
 
 // Data version - increment to force reset once
