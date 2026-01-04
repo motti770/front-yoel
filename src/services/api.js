@@ -1,14 +1,13 @@
 /**
  * API Service Layer
- * Connects to the real CRM API at https://crm-api.app.mottidokib.com
+ * Connects to the real CRM API at https://the-shull-api.app.mottidokib.com
  */
 
 import axios from 'axios';
 
 // ============ MOCK MODE ============
 // Set to true to use mock data (when backend is down)
-// TODO: Change to false when backend is back online
-const MOCK_MODE = true;
+const MOCK_MODE = false;
 
 // Data version - increment to force reset once
 const MOCK_DATA_VERSION = 20;
@@ -1927,7 +1926,7 @@ let mockMaterials = loadFromStorage('mockMaterials', defaultMockMaterials);
 let mockNotifications = loadFromStorage('mockNotifications', defaultMockNotifications);
 
 // API Configuration
-const API_URL = import.meta.env.VITE_API_URL || 'https://crm-api.app.mottidokib.com';
+const API_URL = import.meta.env.VITE_API_URL || 'https://the-shull-api.app.mottidokib.com';
 
 // Create axios instance
 const api = axios.create({
