@@ -6,6 +6,9 @@
 // Re-export api instance and MOCK_MODE from config
 export { default, MOCK_MODE } from './config';
 
+// Re-export mock data utilities
+export { resetMockData, getMockData } from './mockData';
+
 // Re-export all services for backwards compatibility
 export { authService } from './auth';
 export { customersService } from './customers';

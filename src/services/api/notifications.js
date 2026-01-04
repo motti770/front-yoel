@@ -7,28 +7,40 @@ import api, { MOCK_MODE } from './config';
 
 export const notificationsService = {
     getAll: async (params = {}) => {
-        if (MOCK_MODE) {
-            return {
-                success: true,
-                data: {
-                    notifications: [],
-                    total: 0,
-                    unreadCount: 0
-                }
-            };
+        // Notifications endpoint doesn't exist yet - return empty
+        // TODO: Remove this when backend adds /notifications endpoint
+        try {
+            if (MOCK_MODE) {
+                return {
+                    success: true,
+                    data: {
+                        notifications: [],
+                        total: 0,
+                        unreadCount: 0
+                    }
+                };
+            }
+            const queryParams = new URLSearchParams();
+            Object.entries(params).forEach(([key, val]) => {
+                if (val !== undefined && val !== null) queryParams.append(key, val);
+            });
+            return api.get(`/notifications?${queryParams}`);
+        } catch (err) {
+            // If endpoint doesn't exist, return empty data
+            console.warn('Notifications endpoint not available');
+            return { success: true, data: { notifications: [], total: 0, unreadCount: 0 } };
         }
-        const queryParams = new URLSearchParams();
-        Object.entries(params).forEach(([key, val]) => {
-            if (val !== undefined && val !== null) queryParams.append(key, val);
-        });
-        return api.get(`/notifications?${queryParams}`);
     },
 
     getUnreadCount: async () => {
-        if (MOCK_MODE) {
+        try {
+            if (MOCK_MODE) {
+                return { success: true, data: { count: 0 } };
+            }
+            return api.get('/notifications/unread-count');
+        } catch (err) {
             return { success: true, data: { count: 0 } };
         }
-        return api.get('/notifications/unread-count');
     },
 
     markAsRead: async (id) => {

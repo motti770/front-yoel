@@ -320,17 +320,15 @@ function LoginPage() {
                         )}
                     </button>
 
-                    {/* Test credentials button - hidden in production */}
-                    {!isProduction && (
-                        <button
-                            type="button"
-                            className="test-login-button"
-                            onClick={handleTestLogin}
-                            disabled={loading}
-                        >
-                            {t('fillTestCredentials')}
-                        </button>
-                    )}
+                    {/* Test credentials button */}
+                    <button
+                        type="button"
+                        className="test-login-button"
+                        onClick={handleTestLogin}
+                        disabled={loading}
+                    >
+                        {t('fillTestCredentials')}
+                    </button>
                 </form>
 
                 <div className="login-footer">

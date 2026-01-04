@@ -7,10 +7,15 @@ import axios from 'axios';
 
 // ============ MOCK MODE ============
 // Set to true to use mock data (when backend is down)
-export const MOCK_MODE = false;
+// TODO: Set to false when backend is ready
+export const MOCK_MODE = true;
 
 // API Configuration
-const API_URL = import.meta.env.VITE_API_URL || 'https://the-shull-api.app.mottidokib.com';
+// In development, use proxy to avoid CORS issues
+// In production, use the real API URL
+const API_URL = import.meta.env.DEV
+    ? '/api'
+    : (import.meta.env.VITE_API_URL || 'https://the-shull-api.app.mottidokib.com');
 
 // Create axios instance
 const api = axios.create({
