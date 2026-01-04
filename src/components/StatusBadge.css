@@ -1,0 +1,103 @@
+/* StatusBadge Component Styles */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid;
+  transition: all var(--transition-fast);
+}
+
+/* Size variants */
+.status-badge--small {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.6875rem;
+  gap: 0.25rem;
+}
+
+.status-badge--small .status-badge__dot {
+  width: 6px;
+  height: 6px;
+}
+
+.status-badge--medium {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.status-badge--medium .status-badge__dot {
+  width: 8px;
+  height: 8px;
+}
+
+.status-badge--large {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  gap: var(--spacing-sm);
+}
+
+.status-badge--large .status-badge__dot {
+  width: 10px;
+  height: 10px;
+}
+
+/* Dot indicator */
+.status-badge__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background-color: currentColor;
+  flex-shrink: 0;
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Label */
+.status-badge__label {
+  line-height: 1;
+}
+
+/* Hover effect */
+.status-badge:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px var(--status-color, rgba(0, 0, 0, 0.2));
+}
+
+/* RTL Support */
+[dir="rtl"] .status-badge {
+  direction: rtl;
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .status-badge {
+  background: color-mix(in srgb, var(--status-color) 15%, transparent);
+}
+
+/* Focus state for accessibility */
+.status-badge:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .status-badge__dot {
+    animation: none;
+  }
+
+  .status-badge:hover {
+    transform: none;
+  }
+}

@@ -106,6 +106,63 @@ function Customers({ currentUser, t, language }) {
         status: 'ACTIVE'
     });
 
+    // Form validation state
+    const [formErrors, setFormErrors] = useState({});
+    const [formTouched, setFormTouched] = useState({});
+
+    // Validate a single field
+    const validateField = (name, value) => {
+        switch (name) {
+            case 'name':
+                if (!value || value.trim() === '') {
+                    return language === 'he' ? 'שם חובה' : language === 'uk' ? "Ім'я обов'язкове" : 'Name is required';
+                }
+                return '';
+            case 'email':
+                if (!value || value.trim() === '') {
+                    return language === 'he' ? 'אימייל חובה' : language === 'uk' ? "Електронна пошта обов'язкова" : 'Email is required';
+                }
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+                    return language === 'he' ? 'כתובת אימייל לא תקינה' : language === 'uk' ? 'Неправильна адреса електронної пошти' : 'Invalid email address';
+                }
+                return '';
+            default:
+                return '';
+        }
+    };
+
+    // Validate all form fields
+    const validateForm = () => {
+        const errors = {
+            name: validateField('name', formData.name),
+            email: validateField('email', formData.email)
+        };
+        setFormErrors(errors);
+        return !errors.name && !errors.email;
+    };
+
+    // Handle field blur
+    const handleFieldBlur = (fieldName) => {
+        setFormTouched(prev => ({ ...prev, [fieldName]: true }));
+        const error = validateField(fieldName, formData[fieldName]);
+        setFormErrors(prev => ({ ...prev, [fieldName]: error }));
+    };
+
+    // Handle field change
+    const handleFieldChange = (fieldName, value) => {
+        setFormData(prev => ({ ...prev, [fieldName]: value }));
+        if (formTouched[fieldName]) {
+            const error = validateField(fieldName, value);
+            setFormErrors(prev => ({ ...prev, [fieldName]: error }));
+        }
+    };
+
+    // Reset form validation on modal close
+    const resetFormValidation = () => {
+        setFormErrors({});
+        setFormTouched({});
+    };
+
     // Fetch customers from API
     useEffect(() => {
         fetchCustomers();
@@ -282,7 +339,11 @@ function Customers({ currentUser, t, language }) {
     };
 
     const handleSave = async () => {
-        if (!formData.name || !formData.email) {
+        // Mark all required fields as touched
+        setFormTouched({ name: true, email: true });
+
+        // Validate form
+        if (!validateForm()) {
             showToast(language === 'he' ? 'נא למלא שדות חובה' : 'Please fill required fields', 'error');
             return;
         }
@@ -464,8 +525,20 @@ function Customers({ currentUser, t, language }) {
                     {customer.status === 'ACTIVE' ? t('active') : t('inactive')}
                 </span>
                 <div className="action-buttons">
-                    <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(customer); }}><Edit size={14} /></button>
-                    <button className="action-btn danger" onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); setShowDeleteModal(true); }}><Trash2 size={14} /></button>
+                    <button
+                        className="action-btn"
+                        onClick={(e) => { e.stopPropagation(); handleEdit(customer); }}
+                        aria-label={language === 'he' ? 'ערוך לקוח' : language === 'uk' ? 'Редагувати клієнта' : 'Edit customer'}
+                    >
+                        <Edit size={14} />
+                    </button>
+                    <button
+                        className="action-btn danger"
+                        onClick={(e) => { e.stopPropagation(); setSelectedCustomer(customer); setShowDeleteModal(true); }}
+                        aria-label={language === 'he' ? 'מחק לקוח' : language === 'uk' ? 'Видалити клієнта' : 'Delete customer'}
+                    >
+                        <Trash2 size={14} />
+                    </button>
                 </div>
             </div>
         </div>
@@ -567,9 +640,27 @@ function Customers({ currentUser, t, language }) {
                             </td>
                             <td>
                                 <div className="action-buttons">
-                                    <button className="action-btn" onClick={() => handleView(customer)}><Eye size={14} /></button>
-                                    <button className="action-btn" onClick={() => handleEdit(customer)}><Edit size={14} /></button>
-                                    <button className="action-btn danger" onClick={() => { setSelectedCustomer(customer); setShowDeleteModal(true); }}><Trash2 size={14} /></button>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => handleView(customer)}
+                                        aria-label={language === 'he' ? 'צפה בלקוח' : language === 'uk' ? 'Переглянути клієнта' : 'View customer'}
+                                    >
+                                        <Eye size={14} />
+                                    </button>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => handleEdit(customer)}
+                                        aria-label={language === 'he' ? 'ערוך לקוח' : language === 'uk' ? 'Редагувати клієнта' : 'Edit customer'}
+                                    >
+                                        <Edit size={14} />
+                                    </button>
+                                    <button
+                                        className="action-btn danger"
+                                        onClick={() => { setSelectedCustomer(customer); setShowDeleteModal(true); }}
+                                        aria-label={language === 'he' ? 'מחק לקוח' : language === 'uk' ? 'Видалити клієнта' : 'Delete customer'}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -1050,31 +1141,72 @@ function Customers({ currentUser, t, language }) {
             {renderContent()}
 
             {/* Add/Edit Modal */}
-            <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={selectedCustomer ? t('edit') : t('newCustomer')}>
+            <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); resetFormValidation(); }} title={selectedCustomer ? t('edit') : t('newCustomer')}>
                 <div className="modal-form">
                     <div className="form-row">
                         <div className="form-group">
-                            <label><span className="required">*</span>{t('customerName')}</label>
-                            <input type="text" className="form-input" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                            <label htmlFor="customer-name"><span className="required">*</span>{t('customerName')}</label>
+                            <input
+                                type="text"
+                                id="customer-name"
+                                className="form-input"
+                                value={formData.name}
+                                onChange={(e) => handleFieldChange('name', e.target.value)}
+                                onBlur={() => handleFieldBlur('name')}
+                                aria-invalid={formTouched.name && formErrors.name ? 'true' : 'false'}
+                                aria-describedby={formTouched.name && formErrors.name ? 'name-error' : undefined}
+                            />
+                            {formTouched.name && formErrors.name && (
+                                <span id="name-error" className="field-error" role="alert">{formErrors.name}</span>
+                            )}
                         </div>
                         <div className="form-group">
-                            <label>{t('company')}</label>
-                            <input type="text" className="form-input" value={formData.companyName} onChange={(e) => setFormData({ ...formData, companyName: e.target.value })} />
+                            <label htmlFor="customer-company">{t('company')}</label>
+                            <input
+                                type="text"
+                                id="customer-company"
+                                className="form-input"
+                                value={formData.companyName}
+                                onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
+                            />
                         </div>
                     </div>
                     <div className="form-row">
                         <div className="form-group">
-                            <label><span className="required">*</span>{t('email')}</label>
-                            <input type="email" className="form-input" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                            <label htmlFor="customer-email"><span className="required">*</span>{t('email')}</label>
+                            <input
+                                type="email"
+                                id="customer-email"
+                                className="form-input"
+                                value={formData.email}
+                                onChange={(e) => handleFieldChange('email', e.target.value)}
+                                onBlur={() => handleFieldBlur('email')}
+                                aria-invalid={formTouched.email && formErrors.email ? 'true' : 'false'}
+                                aria-describedby={formTouched.email && formErrors.email ? 'email-error' : undefined}
+                            />
+                            {formTouched.email && formErrors.email && (
+                                <span id="email-error" className="field-error" role="alert">{formErrors.email}</span>
+                            )}
                         </div>
                         <div className="form-group">
-                            <label>{t('phone')}</label>
-                            <input type="tel" className="form-input" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                            <label htmlFor="customer-phone">{t('phone')}</label>
+                            <input
+                                type="tel"
+                                id="customer-phone"
+                                className="form-input"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            />
                         </div>
                     </div>
                     <div className="form-group">
-                        <label>{t('status')}</label>
-                        <select className="form-select" value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })}>
+                        <label htmlFor="customer-status">{t('status')}</label>
+                        <select
+                            id="customer-status"
+                            className="form-select"
+                            value={formData.status}
+                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        >
                             <option value="ACTIVE">{t('active')}</option>
                             <option value="INACTIVE">{t('inactive')}</option>
                         </select>
@@ -1086,7 +1218,7 @@ function Customers({ currentUser, t, language }) {
                                 Demo
                             </button>
                         )}
-                        <button className="btn btn-outline" onClick={() => setShowAddModal(false)} disabled={saving}>{t('cancel')}</button>
+                        <button className="btn btn-outline" onClick={() => { setShowAddModal(false); resetFormValidation(); }} disabled={saving}>{t('cancel')}</button>
                         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                             {saving ? <Loader2 className="spinner" size={16} /> : <Check size={16} />}
                             {t('save')}

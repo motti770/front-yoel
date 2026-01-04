@@ -1,0 +1,129 @@
+/* LoadingState Component Styles */
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-xl);
+}
+
+/* Full page mode */
+.loading-state--full-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-primary);
+  z-index: 9999;
+}
+
+/* Size variants */
+.loading-state--small {
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+.loading-state--small .loading-state__spinner {
+  width: 24px;
+  height: 24px;
+}
+
+.loading-state--small .loading-state__message {
+  font-size: 0.75rem;
+}
+
+.loading-state--medium .loading-state__spinner {
+  width: 40px;
+  height: 40px;
+}
+
+.loading-state--medium .loading-state__message {
+  font-size: 0.875rem;
+}
+
+.loading-state--large {
+  padding: var(--spacing-2xl);
+  gap: var(--spacing-lg);
+}
+
+.loading-state--large .loading-state__spinner {
+  width: 64px;
+  height: 64px;
+}
+
+.loading-state--large .loading-state__message {
+  font-size: 1.125rem;
+}
+
+/* Spinner */
+.loading-state__spinner {
+  position: relative;
+  width: 40px;
+  height: 40px;
+}
+
+.loading-state__spinner-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-full);
+  border: 3px solid transparent;
+  border-top-color: var(--primary);
+  animation: loading-spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+
+.loading-state__spinner-ring:nth-child(1) {
+  animation-delay: -0.45s;
+  border-top-color: var(--primary);
+}
+
+.loading-state__spinner-ring:nth-child(2) {
+  animation-delay: -0.3s;
+  border-top-color: var(--primary-light);
+  transform: scale(0.8);
+}
+
+.loading-state__spinner-ring:nth-child(3) {
+  animation-delay: -0.15s;
+  border-top-color: var(--primary-dark);
+  transform: scale(0.6);
+}
+
+@keyframes loading-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Message */
+.loading-state__message {
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-align: center;
+  margin: 0;
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .loading-state--full-page {
+  background: var(--bg-primary);
+}
+
+/* RTL Support */
+[dir="rtl"] .loading-state__message {
+  direction: rtl;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .loading-state__spinner-ring {
+    animation-duration: 2s;
+  }
+}

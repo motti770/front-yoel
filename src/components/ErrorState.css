@@ -1,0 +1,125 @@
+/* ErrorState Component Styles */
+
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xl);
+  text-align: center;
+}
+
+/* Full page mode */
+.error-state--full-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-primary);
+  z-index: 9999;
+}
+
+/* Icon */
+.error-state__icon {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 107, 107, 0.15);
+  border-radius: var(--radius-full);
+  color: var(--danger);
+  margin-bottom: var(--spacing-sm);
+}
+
+.error-state__icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+/* Title */
+.error-state__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Message */
+.error-state__message {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 400px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Retry Button */
+.error-state__retry-btn {
+  margin-top: var(--spacing-md);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.error-state__retry-btn:hover svg {
+  animation: error-retry-spin 0.5s ease-in-out;
+}
+
+@keyframes error-retry-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .error-state--full-page {
+  background: var(--bg-primary);
+}
+
+[data-theme="light"] .error-state__icon {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--danger);
+}
+
+/* RTL Support */
+[dir="rtl"] .error-state {
+  direction: rtl;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .error-state {
+    padding: var(--spacing-xl);
+  }
+
+  .error-state__icon {
+    width: 64px;
+    height: 64px;
+  }
+
+  .error-state__icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .error-state__title {
+    font-size: 1.25rem;
+  }
+
+  .error-state__message {
+    font-size: 0.875rem;
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .error-state__retry-btn:hover svg {
+    animation: none;
+  }
+}

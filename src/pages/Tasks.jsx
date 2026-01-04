@@ -383,12 +383,19 @@ function Tasks({ currentUser, t, language }) {
                                         <button
                                             className="action-btn btn-primary-text"
                                             onClick={() => handleUpdateStatus(task.id, task.status === 'PENDING' ? 'IN_PROGRESS' : 'COMPLETED')}
+                                            aria-label={task.status === 'PENDING'
+                                                ? (language === 'he' ? 'התחל משימה' : language === 'uk' ? 'Почати завдання' : 'Start task')
+                                                : (language === 'he' ? 'סיים משימה' : language === 'uk' ? 'Завершити завдання' : 'Complete task')}
                                         >
                                             <Check size={14} />
                                         </button>
                                     )}
                                     {!task.assignedTo && (
-                                        <button className="action-btn" onClick={() => handleAssign(task.id, currentUser?.id)}>
+                                        <button
+                                            className="action-btn"
+                                            onClick={() => handleAssign(task.id, currentUser?.id)}
+                                            aria-label={language === 'he' ? 'הקצה לעצמי' : language === 'uk' ? 'Призначити собі' : 'Assign to myself'}
+                                        >
                                             <User size={14} />
                                         </button>
                                     )}

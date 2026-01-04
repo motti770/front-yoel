@@ -777,10 +777,18 @@ function Orders({ currentUser, t, language }) {
                             <td>{order.createdAt?.split('T')[0] || '-'}</td>
                             <td>
                                 <div className="action-buttons">
-                                    <button className="action-btn" onClick={() => handleView(order)}>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => handleView(order)}
+                                        aria-label={language === 'he' ? 'צפה בהזמנה' : language === 'uk' ? 'Переглянути замовлення' : 'View order'}
+                                    >
                                         <Eye size={16} />
                                     </button>
-                                    <button className="action-btn danger" onClick={() => { setSelectedOrder(order); setShowDeleteModal(true); }}>
+                                    <button
+                                        className="action-btn danger"
+                                        onClick={() => { setSelectedOrder(order); setShowDeleteModal(true); }}
+                                        aria-label={language === 'he' ? 'בטל הזמנה' : language === 'uk' ? 'Скасувати замовлення' : 'Cancel order'}
+                                    >
                                         <Trash2 size={16} />
                                     </button>
                                 </div>

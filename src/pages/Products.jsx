@@ -537,9 +537,27 @@ function Products({ currentUser, t, language }) {
                             </td>
                             <td>
                                 <div className="action-buttons">
-                                    <button className="action-btn" onClick={() => handleView(product)}><Eye size={14} /></button>
-                                    <button className="action-btn" onClick={() => handleEdit(product)}><Edit size={14} /></button>
-                                    <button className="action-btn danger" onClick={() => { setSelectedProduct(product); setShowDeleteModal(true); }}><Trash2 size={14} /></button>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => handleView(product)}
+                                        aria-label={language === 'he' ? 'צפה במוצר' : language === 'uk' ? 'Переглянути продукт' : 'View product'}
+                                    >
+                                        <Eye size={14} />
+                                    </button>
+                                    <button
+                                        className="action-btn"
+                                        onClick={() => handleEdit(product)}
+                                        aria-label={language === 'he' ? 'ערוך מוצר' : language === 'uk' ? 'Редагувати продукт' : 'Edit product'}
+                                    >
+                                        <Edit size={14} />
+                                    </button>
+                                    <button
+                                        className="action-btn danger"
+                                        onClick={() => { setSelectedProduct(product); setShowDeleteModal(true); }}
+                                        aria-label={language === 'he' ? 'מחק מוצר' : language === 'uk' ? 'Видалити продукт' : 'Delete product'}
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -614,10 +632,18 @@ function Products({ currentUser, t, language }) {
                     </div>
 
                     <div className="product-actions">
-                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleView(product); }} title={language === 'he' ? 'צפייה' : 'View'}>
+                        <button
+                            className="action-btn"
+                            onClick={(e) => { e.stopPropagation(); handleView(product); }}
+                            aria-label={language === 'he' ? 'צפה במוצר' : language === 'uk' ? 'Переглянути продукт' : 'View product'}
+                        >
                             <Eye size={16} />
                         </button>
-                        <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(product); }} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                        <button
+                            className="action-btn"
+                            onClick={(e) => { e.stopPropagation(); handleEdit(product); }}
+                            aria-label={language === 'he' ? 'ערוך מוצר' : language === 'uk' ? 'Редагувати продукт' : 'Edit product'}
+                        >
                             <Edit size={16} />
                         </button>
                     </div>
@@ -815,13 +841,25 @@ function Products({ currentUser, t, language }) {
                         </div>
 
                         <div className="product-actions">
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleView(product); }} title={language === 'he' ? 'צפייה' : 'View'}>
+                            <button
+                                className="action-btn"
+                                onClick={(e) => { e.stopPropagation(); handleView(product); }}
+                                aria-label={language === 'he' ? 'צפה במוצר' : language === 'uk' ? 'Переглянути продукт' : 'View product'}
+                            >
                                 <Eye size={16} />
                             </button>
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); handleEdit(product); }} title={language === 'he' ? 'עריכה' : 'Edit'}>
+                            <button
+                                className="action-btn"
+                                onClick={(e) => { e.stopPropagation(); handleEdit(product); }}
+                                aria-label={language === 'he' ? 'ערוך מוצר' : language === 'uk' ? 'Редагувати продукт' : 'Edit product'}
+                            >
                                 <Edit size={16} />
                             </button>
-                            <button className="action-btn danger" onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setShowDeleteModal(true); }} title={language === 'he' ? 'מחיקה' : 'Delete'}>
+                            <button
+                                className="action-btn danger"
+                                onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setShowDeleteModal(true); }}
+                                aria-label={language === 'he' ? 'מחק מוצר' : language === 'uk' ? 'Видалити продукт' : 'Delete product'}
+                            >
                                 <Trash2 size={16} />
                             </button>
                         </div>

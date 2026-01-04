@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Plus,
     Search,
@@ -7,7 +7,10 @@ import {
     Trash2,
     Shield,
     Building2,
-    Mail
+    Mail,
+    Loader2,
+    AlertCircle,
+    RefreshCw
 } from 'lucide-react';
 import { usersService } from '../services/api';
 import './UsersPage.css';
@@ -15,6 +18,9 @@ import './UsersPage.css';
 function UsersPage({ currentUser }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     // Only ADMIN can access this page
     if (currentUser.role !== 'ADMIN') {
@@ -27,10 +33,38 @@ function UsersPage({ currentUser }) {
         );
     }
 
+    useEffect(() => {
+        fetchUsers();
+    }, []);
+
+    const fetchUsers = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await usersService.getAll();
+            if (response.success) {
+                const usersData = response.data?.users || response.data || [];
+                setUsers(Array.isArray(usersData) ? usersData : []);
+            } else {
+                throw new Error(response.error?.message || 'Failed to fetch users');
+            }
+        } catch (err) {
+            console.error('Failed to fetch users:', err);
+            setError('אירעה שגיאה בטעינת המשתמשים');
+            // Fallback to empty array
+            setUsers([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredUsers = users.filter(user => {
-        const matchesSearch = user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const firstName = user.firstName || '';
+        const lastName = user.lastName || '';
+        const email = user.email || '';
+        const matchesSearch = firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            email.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesRole = roleFilter === 'all' || user.role === roleFilter;
         return matchesSearch && matchesRole;
     });
@@ -50,6 +84,7 @@ function UsersPage({ currentUser }) {
     // Modal state
     const [showModal, setShowModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -75,39 +110,38 @@ function UsersPage({ currentUser }) {
     const handleEdit = (user) => {
         setSelectedUser(user);
         setFormData({
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            role: user.role,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            role: user.role || 'EMPLOYEE',
             phone: user.phone || '',
             password: '' // Don't show password on edit
         });
         setShowModal(true);
     };
 
-    const [users, setUsers] = useState(mockUsers); // Start with mock, then fetch
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
-
-    const fetchUsers = async () => {
-        try {
-            const response = await usersService.getAll();
-            if (response.success) {
-                setUsers(response.data.users || response.data);
-            }
-        } catch (err) {
-            console.error('Failed to fetch users:', err);
-        }
-    };
-
     const handleSave = async () => {
+        // Validate required fields
+        if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim()) {
+            alert('נא למלא את כל השדות הנדרשים');
+            return;
+        }
+
+        if (!selectedUser && !formData.password) {
+            alert('נא להזין סיסמה למשתמש חדש');
+            return;
+        }
+
+        setSaving(true);
         try {
             let response;
             if (selectedUser) {
-                // Update existing
-                response = await usersService.update(selectedUser.id, formData);
+                // Update existing - don't send empty password
+                const updateData = { ...formData };
+                if (!updateData.password) {
+                    delete updateData.password;
+                }
+                response = await usersService.update(selectedUser.id, updateData);
             } else {
                 // Create new
                 response = await usersService.create(formData);
@@ -118,14 +152,14 @@ function UsersPage({ currentUser }) {
                 fetchUsers(); // Refresh list
                 alert(selectedUser ? 'משתמש עודכן בהצלחה' : 'משתמש נוצר בהצלחה');
             } else {
-                // Determine if we should fallback to mock for demo purposes if API isn't ready
-                // For now, let's just show mock success to let the user proceed with the flow
-                console.warn('API call failed, falling back to local update for demo flow');
+                // Handle API error but allow demo flow
+                console.warn('API call returned error:', response.error);
 
+                // Local fallback for demo purposes
                 const newUser = {
-                    id: selectedUser ? selectedUser.id : Date.now(),
+                    id: selectedUser ? selectedUser.id : Date.now().toString(),
                     ...formData,
-                    avatar: formData.firstName.charAt(0) + formData.lastName.charAt(0),
+                    avatar: (formData.firstName.charAt(0) || '') + (formData.lastName.charAt(0) || ''),
                     createdAt: new Date().toLocaleDateString('he-IL')
                 };
 
@@ -142,9 +176,9 @@ function UsersPage({ currentUser }) {
             console.error('Error saving user:', err);
             // Fallback for seamless flow testing
             const newUser = {
-                id: selectedUser ? selectedUser.id : Date.now(),
+                id: selectedUser ? selectedUser.id : Date.now().toString(),
                 ...formData,
-                avatar: formData.firstName.charAt(0) + formData.lastName.charAt(0),
+                avatar: (formData.firstName.charAt(0) || '') + (formData.lastName.charAt(0) || ''),
                 createdAt: new Date().toLocaleDateString('he-IL')
             };
 
@@ -154,8 +188,63 @@ function UsersPage({ currentUser }) {
                 setUsers(prev => [...prev, newUser]);
             }
             setShowModal(false);
+            alert('משתמש נשמר (מצב דמו)');
+        } finally {
+            setSaving(false);
         }
     };
+
+    const handleDelete = async (userId) => {
+        if (!window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) {
+            return;
+        }
+
+        try {
+            const response = await usersService.delete(userId);
+            if (response.success) {
+                fetchUsers(); // Refresh list
+                alert('משתמש נמחק בהצלחה');
+            } else {
+                // Local fallback
+                setUsers(prev => prev.filter(u => u.id !== userId));
+                alert('משתמש נמחק (מצב דמו)');
+            }
+        } catch (err) {
+            console.error('Error deleting user:', err);
+            // Local fallback
+            setUsers(prev => prev.filter(u => u.id !== userId));
+            alert('משתמש נמחק (מצב דמו)');
+        }
+    };
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="users-page">
+                <div className="loading-container glass-card">
+                    <Loader2 size={48} className="spinner" />
+                    <p>טוען משתמשים...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Error state
+    if (error && users.length === 0) {
+        return (
+            <div className="users-page">
+                <div className="error-container glass-card">
+                    <AlertCircle size={48} />
+                    <h2>שגיאה</h2>
+                    <p>{error}</p>
+                    <button className="btn btn-primary" onClick={fetchUsers}>
+                        <RefreshCw size={18} />
+                        נסה שוב
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="users-page">
@@ -197,86 +286,100 @@ function UsersPage({ currentUser }) {
                         </select>
                     </div>
                 </div>
+                <button className="btn btn-outline" onClick={fetchUsers}>
+                    <RefreshCw size={18} />
+                    רענן
+                </button>
             </div>
 
             {/* Users Grid */}
             <div className="users-grid">
-                {filteredUsers.map(user => (
-                    <div key={user.id} className="user-card glass-card">
-                        <div className="user-header">
-                            <div
-                                className="user-avatar"
-                                style={{ background: roleColors[user.role] }}
-                            >
-                                {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                {filteredUsers.length > 0 ? (
+                    filteredUsers.map(user => (
+                        <div key={user.id} className="user-card glass-card">
+                            <div className="user-header">
+                                <div
+                                    className="user-avatar"
+                                    style={{ background: roleColors[user.role] || '#667eea' }}
+                                >
+                                    {(user.firstName?.charAt(0) || '')}{(user.lastName?.charAt(0) || '')}
+                                </div>
+                                <div
+                                    className="user-role-badge"
+                                    style={{
+                                        background: `${roleColors[user.role] || '#667eea'}20`,
+                                        color: roleColors[user.role] || '#667eea'
+                                    }}
+                                >
+                                    <Shield size={12} />
+                                    {roleLabels[user.role] || user.role}
+                                </div>
                             </div>
-                            <div
-                                className="user-role-badge"
-                                style={{
-                                    background: `${roleColors[user.role]}20`,
-                                    color: roleColors[user.role]
-                                }}
-                            >
-                                <Shield size={12} />
-                                {roleLabels[user.role]}
-                            </div>
-                        </div>
 
-                        <div className="user-info">
-                            <h3>{user.firstName} {user.lastName}</h3>
-                            <a href={`mailto:${user.email}`} className="user-email">
-                                <Mail size={14} />
-                                {user.email}
-                            </a>
-                            {user.phone && (
-                                <span className="user-phone">{user.phone}</span>
+                            <div className="user-info">
+                                <h3>{user.firstName} {user.lastName}</h3>
+                                <a href={`mailto:${user.email}`} className="user-email">
+                                    <Mail size={14} />
+                                    {user.email}
+                                </a>
+                                {user.phone && (
+                                    <span className="user-phone">{user.phone}</span>
+                                )}
+                            </div>
+
+                            {user.department && (
+                                <div
+                                    className="user-department"
+                                    style={{
+                                        background: `${user.department.color || '#667eea'}20`,
+                                        color: user.department.color || '#667eea'
+                                    }}
+                                >
+                                    <Building2 size={14} />
+                                    {user.department.name}
+                                </div>
                             )}
-                        </div>
 
-                        {user.department && (
-                            <div
-                                className="user-department"
-                                style={{
-                                    background: `${user.department.color}20`,
-                                    color: user.department.color
-                                }}
-                            >
-                                <Building2 size={14} />
-                                {user.department.name}
+                            <div className="user-meta">
+                                <span>נוצר: {user.createdAt || 'לא ידוע'}</span>
                             </div>
-                        )}
 
-                        <div className="user-meta">
-                            <span>נוצר: {user.createdAt || 'Before Time'}</span>
-                        </div>
-
-                        <div className="user-actions">
-                            <button className="action-btn" onClick={() => handleEdit(user)}>
-                                <Edit size={16} />
-                                עריכה
-                            </button>
-                            {user.id !== currentUser.id && (
-                                <button className="action-btn danger">
-                                    <Trash2 size={16} />
+                            <div className="user-actions">
+                                <button className="action-btn" onClick={() => handleEdit(user)}>
+                                    <Edit size={16} />
+                                    עריכה
                                 </button>
-                            )}
+                                {user.id !== currentUser.id && (
+                                    <button
+                                        className="action-btn danger"
+                                        onClick={() => handleDelete(user.id)}
+                                        aria-label="מחק משתמש"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                )}
+                            </div>
                         </div>
+                    ))
+                ) : (
+                    <div className="no-users glass-card">
+                        <p>לא נמצאו משתמשים</p>
                     </div>
-                ))}
+                )}
             </div>
 
             {/* Edit/Add Modal */}
             {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content glass-card">
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <h3>{selectedUser ? 'עריכת משתמש' : 'משתמש חדש'}</h3>
-                            <button className="close-btn" onClick={() => setShowModal(false)}>×</button>
+                            <button className="close-btn" onClick={() => setShowModal(false)}>x</button>
                         </div>
                         <div className="modal-body">
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label>שם פרטי</label>
+                                    <label>שם פרטי *</label>
                                     <input
                                         type="text"
                                         value={formData.firstName}
@@ -284,7 +387,7 @@ function UsersPage({ currentUser }) {
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label>שם משפחה</label>
+                                    <label>שם משפחה *</label>
                                     <input
                                         type="text"
                                         value={formData.lastName}
@@ -293,11 +396,19 @@ function UsersPage({ currentUser }) {
                                 </div>
                             </div>
                             <div className="form-group">
-                                <label>אימייל</label>
+                                <label>אימייל *</label>
                                 <input
                                     type="email"
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>טלפון</label>
+                                <input
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                 />
                             </div>
                             <div className="form-group">
@@ -313,7 +424,7 @@ function UsersPage({ currentUser }) {
                             </div>
                             {!selectedUser && (
                                 <div className="form-group">
-                                    <label>סיסמה זמנית</label>
+                                    <label>סיסמה זמנית *</label>
                                     <input
                                         type="password"
                                         value={formData.password}
@@ -324,7 +435,10 @@ function UsersPage({ currentUser }) {
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-outline" onClick={() => setShowModal(false)}>ביטול</button>
-                            <button className="btn btn-primary" onClick={handleSave}>שמור</button>
+                            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                                {saving ? <Loader2 size={18} className="spinner" /> : null}
+                                {saving ? 'שומר...' : 'שמור'}
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -244,6 +244,57 @@
     transition: width 0.5s ease-out;
 }
 
+/* Loading and Error States */
+.loading-container,
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    text-align: center;
+    min-height: 300px;
+}
+
+.loading-container p,
+.error-container p {
+    margin-top: var(--spacing-lg);
+    color: var(--text-secondary);
+}
+
+.error-container h2 {
+    margin: var(--spacing-lg) 0 var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.error-container .btn {
+    margin-top: var(--spacing-lg);
+}
+
+.spinner {
+    animation: spin 1s linear infinite;
+    color: var(--primary);
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* No Data State */
+.no-data {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-2xl);
+    color: var(--text-tertiary);
+    min-height: 200px;
+}
+
 @media (max-width: 1024px) {
     .analytics-grid {
         grid-template-columns: 1fr;

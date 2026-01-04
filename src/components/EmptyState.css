@@ -1,0 +1,113 @@
+/* EmptyState Component Styles */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-md);
+  padding: var(--spacing-2xl);
+  text-align: center;
+  min-height: 200px;
+}
+
+/* Icon */
+.empty-state__icon {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--glass-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.empty-state__icon svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.7;
+}
+
+/* Title */
+.empty-state__title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+/* Description */
+.empty-state__description {
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Action Button */
+.empty-state__action-btn {
+  margin-top: var(--spacing-md);
+}
+
+/* Light theme adjustments */
+[data-theme="light"] .empty-state__icon {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+}
+
+/* RTL Support */
+[dir="rtl"] .empty-state {
+  direction: rtl;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .empty-state {
+    padding: var(--spacing-xl);
+  }
+
+  .empty-state__icon {
+    width: 72px;
+    height: 72px;
+  }
+
+  .empty-state__icon svg {
+    width: 36px;
+    height: 36px;
+  }
+
+  .empty-state__title {
+    font-size: 1.125rem;
+  }
+
+  .empty-state__description {
+    font-size: 0.875rem;
+  }
+}
+
+/* Animation on mount */
+.empty-state {
+  animation: empty-state-fade-in 0.3s ease-out;
+}
+
+@keyframes empty-state-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .empty-state {
+    animation: none;
+  }
+}
